@@ -9,7 +9,7 @@
 <title>Geriatría UC · Guía del rotante</title>
 <!--
   ============================================================
-  Geriatría UC · Guía del rotante — Prototipo v0.2
+  Geriatría UC · Guía del rotante — Prototipo v0.3
   ------------------------------------------------------------
   Archivo único, autocontenido (HTML + CSS + JS vanilla).
   Funciona abriéndolo directamente (file://) y sin conexión.
@@ -30,7 +30,8 @@
     [JS-3]  Directorio (editable, localStorage, exportar/importar)
     [JS-4]  Recursos (enlaces fijos + enlaces propios)
     [JS-6]  Plantillas (ingreso HGG, entrega de turno, interconsulta, evolución) → texto plano para TrakCare
-    [JS-7]  Más: Checklists, Glosario, Pauta de evaluación, Calendario, Recursos
+    [JS-7]  Más: Equipo, Checklists, Glosario, Pauta de evaluación, Calendarios 2026 + Mi semana, Recursos
+    [JS-8]  v0.3: Avisos (banner editable), Equipo/Organigrama, Poli SJ, Turnos FDS, Calendarios 2026, Mi semana
     [JS-5]  Arranque
   ============================================================
 -->
@@ -223,6 +224,26 @@ pre.copytxt{white-space:pre-wrap;word-break:break-word;font-size:13px;background
 .pauta .crit select{min-height:40px;border:1px solid var(--line);border-radius:8px;padding:4px;width:100%}
 .pauta .crit textarea{grid-column:1/3;min-height:40px;border:1px solid var(--line);border-radius:8px;padding:6px;width:100%;font-size:13px}
 .calimg{max-width:100%;border-radius:12px;border:1px solid var(--line);display:block;margin-top:10px}
+/* v0.3 — Banner de avisos, organigrama, calendarios 2026, Mi semana */
+.banner{background:var(--warn-bg);border:1px solid #efd58a;border-left:5px solid var(--warn);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px}
+.banner .bh{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--warn);margin-bottom:6px}
+.banner pre.bt{white-space:pre-wrap;word-break:break-word;font:inherit;font-size:14px;margin:0}
+.org{display:flex;flex-direction:column;align-items:center}
+.org-lvl{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;position:relative;padding-top:18px;width:100%}
+.org-lvl::before{content:'';position:absolute;top:0;left:50%;width:2px;height:18px;background:var(--uc-2);opacity:.5}
+.org-lvl.top{padding-top:0}.org-lvl.top::before{display:none}
+.org-node{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;flex:1 1 120px;max-width:170px;text-align:center;font-size:12px;line-height:1.3}
+.org-node b{display:block;font-size:13px;color:var(--uc);margin-bottom:2px}
+.org-node span{color:var(--muted)}
+.org-node.jefe{border-color:var(--uc);background:var(--uc-soft);max-width:280px;flex-basis:240px}
+.org-node.area{background:#f7f9fb;border-style:dashed}
+.contact.doc .info span{white-space:normal;overflow:visible}
+.contact.doc .info span.rol{color:var(--text);margin:2px 0}
+table.tbl.cal2026 td span.hoy{background:var(--warn-bg);border-radius:6px;padding:0 4px;font-weight:700}
+table.tbl.cal2026 td span{white-space:nowrap}
+table.tbl.ms{min-width:640px}
+table.tbl.ms td{padding:4px}
+table.tbl.ms textarea{width:100%;min-height:72px;border:1px solid var(--line);border-radius:8px;padding:6px;font-size:12px;resize:vertical;background:#fff}
 </style>
 </head>
 <body>
@@ -248,7 +269,7 @@ pre.copytxt{white-space:pre-wrap;word-break:break-word;font-size:13px;background
   <!-- Pestaña 5: Más (Checklists, Glosario, Pauta, Calendario, Recursos) -->
   <section class="view" id="view-mas"></section>
 
-  <footer>Prototipo v0.2 · Geriatría UC CHRISTUS · No reemplaza el juicio clínico</footer>
+  <footer>Prototipo v0.3 · Geriatría UC CHRISTUS · No reemplaza el juicio clínico</footer>
 </main>
 
 <nav class="bottom" id="nav">
@@ -318,11 +339,11 @@ function previewCopy(title, txt) {
 }
 
 const TABS = {
-  rotacion: { title: 'Rotación', sub: 'Bienvenida · semana tipo · reglas' },
+  rotacion: { title: 'Rotación', sub: 'Avisos · semana tipo · poli SJ · fin de semana · reglas' },
   plant:    { title: 'Plantillas', sub: 'Ingreso HGG · entrega · IC · evolución' },
   calc:     { title: 'Calculadoras', sub: 'Escalas de uso frecuente en Geriatría' },
   dir:      { title: 'Directorio', sub: 'Contactos del servicio (editable)' },
-  mas:      { title: 'Más', sub: 'Checklists · Glosario · Pauta · Calendario · Recursos' }
+  mas:      { title: 'Más', sub: 'Equipo · Checklists · Glosario · Pauta · Calendarios · Recursos' }
 };
 let currentTab = 'rotacion';
 let calcOpen = null; // id de la calculadora abierta, o null (menú)
@@ -350,6 +371,7 @@ $('#btnBack').addEventListener('click', () => { if (backFn) backFn(); });
 /* Texto de bienvenida. Los [corchetes] son PLACEHOLDERS a completar por el equipo docente.
    NOTA: no se han inventado horarios, lugares ni nombres. */
 const ROTACION_HTML = `
+<div id="avisoBox"></div>
 <div class="card">
   <h2>Bienvenido/a a Geriatría UC CHRISTUS</h2>
   <p>Esta guía reúne lo práctico de la rotación en el <b>Hospital Clínico San Carlos de Apoquindo</b>: a quién contactar, qué escalas usar y dónde encontrar las guías de referencia.</p>
@@ -359,7 +381,8 @@ const ROTACION_HTML = `
 <div class="card">
   <h2>Organización de la rotación</h2>
   <h3>Equipo docente</h3>
-  <p>Jefe de Servicio: <span class="ph">[nombre]</span> · Jefa de programa: Dra. Trinidad Hoyl · Coordinador de rotantes: Dr. Hugo González · Coordinadora Medicina Interna: Dra. Ingrid Danke · Coordinadora MedFam: Dra. Hoyl · Tutor de internos: Dr. Juan Carlos Rodríguez · Coordinación administrativa: Evelyn Anabalón.</p>
+  <p>Jefa del Programa / Departamento: Dra. Marcela Carrasco (?) · Jefa de programa de residentes y tutora de Medicina Familiar: Dra. Trinidad Hoyl (?) · Jefe UGA San Carlos (desde 17-08-2026) y coordinador del calendario semanal de rotantes: Dr. Hugo González · Coordinadora de becados de Medicina Interna: Dra. Ingrid Danke · Sala UC Marcoleta: Dra. Marianne Born · Tutor de internos: Dr. Juan Carlos Rodríguez · Domicilio / UC en Casa: Dr. Homero Gac · Investigación: Dr. Jorge Browne · Maestro CALENDARIOS 2026: Dra. Steffy Bórquez · Secretaría: Evelyn / Celia (?).</p>
+  <p><button class="btn secondary sm" onclick="goMas('equipo')">Ver equipo y organigrama completo ›</button></p>
   <p class="muted">Teléfonos y correos: <span class="ph">[completar en Directorio]</span>.</p>
   <h3>Puestos fijos de la semana</h3>
   <p><b>Sala UC</b> (hospitalizados; 1 solo rotante por día) y <b>UGA San Carlos 08:30</b> (Unidad Geriátrica de Agudos). Son puesto fijo de la semana completa: no se cambia al rotante a mitad de semana.</p>
@@ -411,15 +434,25 @@ const ROTACION_HTML = `
 
 <div class="card">
   <h2>Reglas por tipo de rotante</h2>
-  <p><span class="tag">Medint</span> <b>Medicina Interna</b> (≈4 semanas). Una semana Sala UC / una semana UGA (puesto fijo) y semanas ambulatorias con docentes. Reparto lo hace la Dra. Danke. Post-turno: día siguiente libre. Miércoles PM: tarde académica. Día de policlínico propio (San Joaquín): el poli es en la TARDE; esa mañana va a Sala UC y ese día no va al poli de becados.</p>
-  <p><span class="tag">MedFam</span> <b>Medicina Familiar</b> (1–4 semanas). Solo ambulatorio, <b>miércoles a viernes</b> (lunes y martes no están con el equipo). Prioridad con Dra. Hoyl y Dr. Rodríguez. Quien está el viernes AM con Cáceres/Hoyl sigue la tarde con el Dr. González en Escuela Militar.</p>
-  <p><span class="tag">Interno</span> <b>Internos</b> (incl. electivos y extranjeros; 3–4 semanas). Sin restricción horaria; ambulatorio. El electivo se presenta el primer día con la Dra. Born. Tutor de internos: Dr. Juan Carlos Rodríguez.</p>
+  <p><span class="tag">Medint</span> <b>Medicina Interna</b> (≈4 semanas). Una semana Sala UC / una semana UGA (puesto fijo) y semanas ambulatorias con docentes. Reparto lo hace la Dra. Danke. Post-turno: día siguiente libre (informar los turnos del mes al coordinador: quedan anotados en la fila del rotante). Miércoles PM: tarde académica. Día de policlínico propio (San Joaquín): el poli es en la TARDE; esa mañana va a Sala UC y ese día no va al poli de becados. Evaluación / prueba con la Dra. Danke el jueves 14:00 de la última semana.</p>
+  <p><span class="tag">MedFam</span> <b>Medicina Familiar</b> (1–4 semanas). Solo ambulatorio, <b>miércoles a viernes</b> (lunes y martes no están con el equipo). Prioridad con Dra. Hoyl y Dr. Rodríguez. Poli becados SJ <b>solo si no hay otra opción</b>. Quien está el viernes AM con Cáceres/Hoyl sigue la tarde con el Dr. González en Escuela Militar.</p>
+  <p><span class="tag">Interno</span> <b>Internos</b> (incl. electivos y extranjeros; 3–4 semanas). Sin restricción horaria; ambulatorio y Sala UC. El electivo se presenta el primer día con la Dra. Born. Tutor de internos: Dr. Juan Carlos Rodríguez. <b>Seminario de delirium</b> por bloques de 3 semanas con tutor rotatorio (Rodríguez, Browne, González, Hoyl, Meza, Born). Los internos nuevos deben aparecer en el calendario: avisar su llegada al coordinador.</p>
   <p><span class="tag">GerUC</span> <b>Becados de Geriatría UC</b>. Se coordinan por correo; solo bloques ambulatorios (nunca Sala UC ni UGA); algunos no entran en la grilla semanal.</p>
   <p><span class="tag">PsiEnlace</span> <b>Fellows de Psiquiatría de enlace</b>. Clínicas ambulatorias con cupo. Miércoles AM: consulta de enlace (no van a poli). Viernes PM: tarde de investigación.</p>
   <p><span class="tag">Fellow</span> <b>Fellows de cognición / Neurocog</b>. Agenda propia; quedan fuera de la grilla semanal.</p>
   <h3>Reglas generales</h3>
-  <p>• Máximo 1 rotante por policlínico (excepto Poli becados SJ, que admite varios). • Un rotante puede quedarse todo el día con el mismo docente si tiene AM y PM. • Evitar traslados grandes entre mañana y tarde. • Jueves AM: Santa Lucía en lo posible. • Avisar al coordinador cambios de turnos o policlínicos apenas se sepan.</p>
+  <p>• Máximo 1 rotante por policlínico (excepto Poli becados SJ, que admite varios). • Un rotante puede quedarse todo el día con el mismo docente si tiene AM y PM. • Evitar traslados grandes entre mañana y tarde. • Jueves AM: Santa Lucía en lo posible. • Nada de bloques a las 17:00 o después. • Martes y miércoles PM nadie queda en Sala UC: sin consulta asignada se va a Poli becados SJ. • <b>Ausencias</b> (congreso, licencia, post-turno): avisar al coordinador y dejarlas anotadas en la hoja "Ausencias" del Sheet Rotaciones_Geriatria. • <b>Tope de rotantes simultáneos:</b> en discusión por el equipo docente (01-10-2026 se propuso un tope; referencia histórica "máx. 2–3 internos a la vez") <span class="ph">[confirmar número]</span>. • HLF: solo con acreditación previa. • Centro nuevo: habilitar antes el perfil TrakCare de ese centro (demora); buscar por RUT o usar el escritorio clínico, que muestra todos los centros.</p>
   <div class="note warn"><b>Trabajo final (VGI):</b> cada rotante entrega una Valoración Geriátrica Integral en su última semana, <b>a más tardar el miércoles de la última semana</b>. Formato: ver Plantillas → Ingreso / Evaluación geriátrica (HGG).</div>
+</div>
+
+<div class="card">
+  <h2>Poli becados San Joaquín</h2>
+  <div id="sjBox"></div>
+</div>
+
+<div class="card">
+  <h2>Turnos de fin de semana</h2>
+  <div id="fdsBox"></div>
 </div>
 
 <div class="card">
@@ -437,7 +470,10 @@ const ROTACION_HTML = `
     <tr><td>Centro Médico Bilbao</td><td>Las Condes</td><td>Francisco Bilbao 4144</td></tr>
     <tr><td>Centro Médico Alcántara</td><td>Las Condes</td><td>Alcántara 3990</td></tr>
     <tr><td>Centro Médico San Joaquín (Poli becados)</td><td>Macul</td><td>Av. Vicuña Mackenna 4686</td></tr>
-    <tr><td>Edificio Académico, 5° piso (5A) — reunión jueves 14:00</td><td>Santiago</td><td>Diagonal Paraguay <span class="ph">[n°]</span></td></tr>
+    <tr><td>Hospital La Florida (HLF) — UGA HLF (requiere acreditación previa)</td><td>La Florida</td><td><span class="ph">[completar]</span></td></tr>
+    <tr><td>Centro Médico San Jorge</td><td><span class="ph">[completar]</span></td><td><span class="ph">[completar]</span></td></tr>
+    <tr><td>Centro Médico Lira</td><td>Santiago</td><td><span class="ph">[completar]</span></td></tr>
+    <tr><td>Edificio Académico, 5° piso (5A; a veces 3A / 6A) — reunión jueves 14:00</td><td>Santiago</td><td>Diagonal Paraguay <span class="ph">[n°]</span></td></tr>
   </table></div>
 </div>
 
@@ -473,8 +509,13 @@ const ROTACION_HTML = `
 </div>`;
 
 const CHECK_DEFAULT = [
-  'Credencial / identificación institucional',
-  'Acceso a TrakCare (usuario y clave)',
+  'Credencial / identificación institucional (en San Carlos se entra con credencial; estacionamiento: algunos con tarjeta)',
+  'Acceso a TrakCare (usuario y clave) y perfil habilitado en CADA centro donde rotaré (demora: pedirlo antes)',
+  'Cuenta de correo UC y cuenta UC CHRISTUS (son cuentas separadas)',
+  'Seguro de responsabilidad civil al día',
+  'Si roto por HLF: acreditación / documentación previa entregada',
+  'Ubicar la sala espejo del poli becados SJ ("en el 36, por atrás") y la sala 5A / 3A / 6A del Edificio Académico',
+  'Avisar mis turnos y ausencias del mes al coordinador (quedan en el calendario)',
   'Acceso a red Wi-Fi institucional',
   'Delantal / uniforme y casillero',
   'Presentación con jefe de servicio y residentes',
@@ -488,6 +529,9 @@ const CHECK_DEFAULT = [
 function renderRotacion() {
   const v = $('#view-rotacion');
   v.innerHTML = ROTACION_HTML;
+  $('#avisoBox').innerHTML = avisoHTML(); bindAviso(renderRotacion);
+  $('#sjBox').innerHTML = sjHTML();
+  $('#fdsBox').innerHTML = fdsHTML();
   renderChecklist();
   $('#chkAdd').onclick = () => { const l = store.get('chk', CHECK_DEFAULT); l.push({ t: '', d: false }); store.set('chk', l); renderChecklist(true); };
   $('#chkReset').onclick = () => { if (confirm('¿Restablecer el checklist original?')) { store.set('chk', CHECK_DEFAULT); renderChecklist(); } };
@@ -1381,14 +1425,19 @@ const RESOURCES = [
   { n: 'MINSAL · Guías clínicas GES', d: 'Ministerio de Salud de Chile: guías GES y adulto mayor', u: 'https://www.minsal.cl' },
   { n: 'SOCGER', d: 'Sociedad de Geriatría y Gerontología de Chile', u: 'https://www.socger.cl' },
   { n: 'Criterios de Beers (AGS 2023)', d: 'Medicamentos potencialmente inapropiados en adultos mayores', u: 'https://agsjournals.onlinelibrary.wiley.com/doi/10.1111/jgs.18372' },
-  { n: 'STOPP/START v3 (2023)', d: 'Criterios de prescripción inapropiada y omisiones', u: 'https://link.springer.com/article/10.1007/s41999-023-00777-y' }
+  { n: 'STOPP/START v3 (2023)', d: 'Criterios de prescripción inapropiada y omisiones', u: 'https://link.springer.com/article/10.1007/s41999-023-00777-y' },
+  { n: 'Herramienta digital VGI', d: 'Valoración geriátrica integral en línea (compartida en el grupo, 30-09-2026)', u: 'https://drcllano.github.io/vgi-herramienta-digital/' },
+  { n: 'Sheet Rotaciones_Geriatria', d: 'Lista de rotantes, calendario y hoja "Ausencias" (Google Sheets del servicio)', u: '[link]' },
+  { n: 'Planilla de proyectos de investigación de becados', d: 'Proyectos e "Ideas de investigación" (Dr. Browne)', u: '[link]' },
+  { n: 'Pizarra Saturno (Urgencia)', d: 'Ver jefe de turno y saturación antes de derivar a Urgencia', u: '[link]' },
+  { n: 'Reporte UC: IA en investigación', d: 'Documento compartido en el grupo (08-10-2026)', u: '[link]' }
 ];
 function renderRec() {
   const own = store.get('links', []);
   const v = $('#view-mas');
   v.innerHTML = `
     <h2 style="font-size:16px;color:var(--uc);margin:4px 0 8px">Referencias</h2>
-    ${RESOURCES.map(r => `<a class="link" target="_blank" rel="noopener" href="${esc(r.u)}"><div><b>${esc(r.n)}</b><span>${esc(r.d)}</span></div></a>`).join('')}
+    ${RESOURCES.map(r => r.u.startsWith('[') ? `<div class="link"><div><b>${esc(r.n)}</b><span>${esc(r.d)} · <span class="ph">${esc(r.u)}</span> (pedir al equipo docente y guardarlo abajo)</span></div></div>` : `<a class="link" target="_blank" rel="noopener" href="${esc(r.u)}"><div><b>${esc(r.n)}</b><span>${esc(r.d)}</span></div></a>`).join('')}
     <h2 style="font-size:16px;color:var(--uc);margin:18px 0 8px">Enlaces del servicio <span class="muted" style="font-weight:400;font-size:13px">(propios, se guardan en este celular)</span></h2>
     ${own.length ? own.map((r, i) => `<a class="link" target="_blank" rel="noopener" href="${esc(r.u)}"><div><b>${esc(r.n)}</b><span>${esc(r.u)}</span></div><button class="del" data-del="${i}" aria-label="Eliminar">×</button></a>`).join('') : '<div class="empty">Sin enlaces propios. Ej.: protocolos internos, carpeta Drive del servicio, formularios.</div>'}
     <div class="card" style="margin-top:12px">
@@ -1613,7 +1662,11 @@ const GLOSARIO = [
   ['Sala UC', 'Pacientes hospitalizados a cargo del equipo de Geriatría en el Hospital Clínico. Un solo rotante por día; entrega de turno con planilla por paciente (cama, datos, antecedentes, fármacos, sd. geriátricos, dx, exámenes, plan).'],
   ['UC en Casa', 'Programa de hospitalización domiciliaria UC CHRISTUS: atención hospitalaria en el domicilio para pacientes seleccionados (alternativa a la hospitalización convencional o alta precoz).'],
   ['Domicilio Dr. Gac', 'Visitas domiciliarias geriátricas del Dr. Gac (lunes y martes PM); las cubre el rotante que está en UGA esa semana.'],
-  ['Poli becados SJ', 'Policlínico docente de becados en el Centro Médico San Joaquín, martes y miércoles 14:00; admite varios rotantes.'],
+  ['Poli becados SJ', 'Policlínico docente de los becados de Geriatría UC en el Centro Médico San Joaquín (sala espejo "en el 36, por atrás"), martes y miércoles 14:00; admite varios rotantes, que acompañan (no atienden solos). Supervisión rotativa de staff los miércoles (ver Más → Calendarios).'],
+  ['Turno de fin de semana', 'Visita de hospitalizados de Geriatría (Sala UC Marcoleta e interconsultas) sábado, domingo y feriados pegados, a cargo de un staff del pool de 8 (calendario en Más → Calendarios). Traspaso el viernes por el grupo. No existe SOS de geriatría.'],
+  ['CALENDARIOS 2026', 'Documento maestro en texto (descripción del grupo de WhatsApp) con turnos de fin de semana, supervisión SJ, Core y seminario de delirium; lo mantiene la Dra. Bórquez.'],
+  ['Core Currículum', 'Sesión docente de los jueves 15:00–16:30 (después de la reunión 5A), con tutor según el maestro; alternan sesiones "Académica" e "Investigación".'],
+  ['HLF', 'Hospital La Florida: UGA HLF (Dra. Cáceres, Dra. Danke, Dr. Meza). Para rotar ahí se requiere acreditación / documentación previa.'],
   ['Reunión académica', 'Martes 08:00 por Zoom, asisten todos los rotantes.'],
   ['Reunión 5° piso', 'Jueves 14:00 en el 5° piso del Edificio Académico (5A); asisten todos.'],
   ['Tarde académica', 'Miércoles PM: bloque libre para actividades académicas de los becados de Medicina Interna.'],
@@ -1652,10 +1705,11 @@ function renderMas(sub) {
   if (!sub) {
     setHeader(TABS.mas.title, TABS.mas.sub, null);
     const items = [
+      ['equipo', 'EQ', 'Equipo y organigrama', 'Quién es quién · a quién acudir · sedes y días'],
+      ['cal', 'CA', 'Calendarios 2026 · Mi semana', 'Supervisión SJ · fin de semana · Core · delirium · memoria · grilla editable'],
       ['check', 'CK', 'Checklists', 'Antidelirium · caídas · UPP · aspiración · desprescripción'],
       ['glos', 'GL', 'Glosario UC', 'UGA, Sala UC, UC en Casa, LET, IDDSI, HGG…'],
       ['pauta', 'PE', 'Pauta de evaluación', 'En construcción — borrador editable'],
-      ['cal', 'CA', 'Calendario de rotantes', 'Se publica cada semana — pegar link'],
       ['rec', 'RF', 'Recursos', 'Referencias y enlaces del servicio']
     ];
     v.innerHTML = `<div class="list">${items.map(i => `<button class="item" data-sub="${i[0]}"><div class="ic">${i[1]}</div><div class="t"><b>${i[2]}</b><span>${i[3]}</span></div><div class="chev">›</div></button>`).join('')}</div>`;
@@ -1702,19 +1756,32 @@ function renderMas(sub) {
     $('#pautaAdd').onclick = () => { const rows = store.get('pauta', []); rows.push({ c: '', n: '', t: '' }); store.set('pauta', rows); renderMas('pauta'); };
     $('#pautaReset').onclick = () => { if (confirm('¿Restablecer el borrador de la pauta?')) { store.del('pauta'); renderMas('pauta'); } };
     $('#pautaCopy').onclick = () => { const rows = store.get('pauta', []); copyText('PAUTA DE EVALUACIÓN (BORRADOR NO OFICIAL)\n' + rows.map(r => `${r.c}: ${r.n || '[ ]'}${r.t ? ' — ' + r.t : ''}`).join('\n')); };
+  } else if (sub === 'equipo') {
+    setHeader('Equipo y organigrama', 'Docentes de Geriatría UC · sin teléfonos', back);
+    v.innerHTML = equipoHTML();
   } else if (sub === 'cal') {
-    setHeader('Calendario de rotantes', 'Se publica cada semana', back);
+    setHeader('Calendarios 2026 · Mi semana', 'Fijos del año + grilla semanal', back);
     const link = store.get('calLink', '');
     const isImg = /\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(link) || /^data:image\//i.test(link);
     v.innerHTML = `<div class="card"><h2>Calendario semanal de rotantes</h2>
-      <p>Calendario semanal de rotantes: <b>se publica cada semana</b> (grilla con docente, sede y horario por rotante). Pegue aquí el link del Drive o de la imagen de la semana para tenerlo a mano.</p>
+      <p>Lo arma el Dr. González cada <b>domingo</b> y lo envía al grupo como imagen y por correo (grilla lun–vie, bandas mañana/tarde, "Docente (sede hora/box) — N" por rotante; rojo = docente ausente, naranjo = congreso / post-turno). Pegue aquí el link del Drive o de la imagen de la semana.</p>
       <div class="field"><label>Link (Drive / imagen)</label><input type="text" id="calUrl" inputmode="url" placeholder="https://…" value="${esc(link)}"></div>
       <div class="row"><button class="btn" id="calSave">Guardar</button>${link ? `<a class="btn secondary" target="_blank" rel="noopener" href="${esc(link)}">Abrir</a><button class="btn ghost" id="calDel">Quitar</button>` : ''}</div>
       ${link && isImg ? `<img class="calimg" src="${esc(link)}" alt="Calendario semanal">` : ''}
       ${link && !isImg ? `<p class="muted" style="margin-top:8px">El link no es una imagen directa; se abre en una pestaña nueva. Si es Drive, use "Abrir".</p>` : ''}
-      <p class="muted" style="margin-top:10px">Recuerde: contactar al docente el día anterior; cambios de poli o turnos avisarlos al coordinador apenas se sepan.</p></div>`;
+      <p class="muted" style="margin-top:10px">Recuerde: contactar al docente el día anterior; cambios de poli, turnos o ausencias avisarlos al coordinador apenas se sepan.</p></div>
+      ${miSemanaHTML()}
+      <div class="card"><h2>Calendarios fijos 2026</h2><p class="muted">Del maestro "CALENDARIOS 2026" (mantiene Dra. Bórquez; vive en la descripción del grupo). Reemplazos y permutas se avisan en el grupo.</p>
+        <details open><summary>Supervisión Poli becados SJ (miércoles)</summary>${tablaSupervision()}</details>
+        <details open><summary>Turnos de fin de semana</summary>${tablaFDS()}</details>
+        <details><summary>Core Currículum (jueves 15:00–16:30)</summary>${tablaCore()}</details>
+        <details><summary>Seminario de delirium (internos)</summary>${tablaDelirium()}</details>
+        <details><summary>Reunión de memoria</summary>${tablaMemoria()}</details>
+        <p class="muted" style="margin-top:8px">Fijos semanales: martes 08:00 reunión académica (Zoom) · jueves 14:00 reunión Edificio Académico 5A (o 3A / 6A) · jueves 15:00 Core · miércoles PM tarde académica Med Int · poli becados SJ mar/mié 14:00. En paros o marchas, reunión y Core pasan a Zoom.</p>
+      </div>`;
     $('#calSave').onclick = () => { let u = $('#calUrl').value.trim(); if (u && !/^(https?:\/\/|data:image\/)/i.test(u)) u = 'https://' + u; store.set('calLink', u); renderMas('cal'); toast('Link guardado'); };
     const d = $('#calDel'); if (d) d.onclick = () => { store.del('calLink'); renderMas('cal'); };
+    bindMiSemana(() => renderMas('cal'));
   } else if (sub === 'rec') {
     setHeader('Recursos', 'Referencias y enlaces propios', back);
     renderRec();
@@ -1722,10 +1789,197 @@ function renderMas(sub) {
   window.scrollTo(0, 0);
 }
 
+/* ========================= [JS-8] v0.3: Avisos, Equipo/Organigrama, Poli SJ, Turnos FDS, Calendarios 2026, Mi semana ========================= */
+/* Fuente: informe "Geriatría UC — análisis del grupo WhatsApp + calendarios Drive (22-10-2026)".
+   Sin teléfonos, correos ni datos de pacientes. Lo inferido va con "(?)" y lo que falta con "[completar]". */
+
+/* ---- Aviso / contingencia (banner editable, localStorage) ---- */
+const AVISO_DEFAULT = `CONTINGENCIA · Aluvión San Carlos de Apoquindo (08-10-2026)
+• Clínica San Carlos cerrada (≥ 2 semanas desde el 08-10); agendas de San Carlos y El Alba bloqueadas octubre–noviembre 2026.
+• Consultas reubicadas a Vitacura, Alcántara, Santa Lucía, Bilbao y Escuela Militar o telemedicina. Reubicaciones conocidas: Dr. Gac → Bilbao (vie); Dr. González → Bilbao (vie, bloque B); Dr. Marín → Escuela Militar (mié, bloque A).
+• Rotantes de UGA San Carlos reubicados a Marcoleta / HLF; internos a Sala UC.
+• Fecha de reapertura de San Carlos / El Alba: [por confirmar].
+Actualizado: 22-10-2026 (editar este aviso con el botón).`;
+function avisoHTML() {
+  const a = store.get('aviso', null) || { t: AVISO_DEFAULT, u: '' };
+  return `<div class="banner" id="banner"><div class="bh"><b>⚠ Avisos y contingencias</b><button class="btn ghost sm" id="avisoEdit">Editar</button></div>
+    <pre class="bt">${esc(a.t)}</pre>${a.u ? `<div class="muted" style="font-size:12px;margin-top:4px">Editado en este celular: ${esc(a.u)}</div>` : ''}</div>`;
+}
+function bindAviso(rerender) {
+  const b = $('#avisoEdit'); if (!b) return;
+  b.onclick = () => {
+    const a = store.get('aviso', null) || { t: AVISO_DEFAULT, u: '' };
+    openModal(`<h2>Editar aviso</h2><p class="muted">Se guarda solo en este celular. No escribir datos de pacientes.</p>
+      <div class="field"><textarea id="avTxt" style="min-height:200px">${esc(a.t)}</textarea></div>
+      <div class="row"><button class="btn" id="avSave">Guardar</button><button class="btn ghost" id="avReset">Restablecer</button><button class="btn ghost" id="avCancel">Cancelar</button></div>`);
+    $('#avSave').onclick = () => { store.set('aviso', { t: $('#avTxt').value, u: new Date().toLocaleDateString('es-CL') }); closeModal(); rerender(); toast('Aviso guardado'); };
+    $('#avReset').onclick = () => { if (confirm('¿Volver al aviso original?')) { store.del('aviso'); closeModal(); rerender(); } };
+    $('#avCancel').onclick = closeModal;
+  };
+}
+
+/* ---- Calendarios 2026 (maestro "CALENDARIOS 2026", descripción del grupo; mantiene Dra. Bórquez) ---- */
+const SUPERVISION_SJ = [
+  ['2026-07-01', 'Silva (MJ)'], ['2026-07-08', 'Browne'], ['2026-07-15', 'Meza'], ['2026-07-22', 'Rodríguez'], ['2026-07-29', 'Cáceres'],
+  ['2026-08-05', 'Silva (MJ)'], ['2026-08-12', 'González'], ['2026-08-19', 'Meza'], ['2026-08-26', 'Bórquez'],
+  ['2026-09-02', 'Browne'], ['2026-09-09', 'Rodríguez'], ['2026-09-16', 'Gac'], ['2026-09-23', 'Cáceres'], ['2026-09-30', 'Meza'],
+  ['2026-10-07', 'Rodríguez'], ['2026-10-14', 'Born'], ['2026-10-21', 'Bórquez'], ['2026-10-28', 'Browne'],
+  ['2026-11-04', 'Hoyl'], ['2026-11-11', 'Piquer'], ['2026-11-18', 'Cáceres'], ['2026-11-25', 'Meza'],
+  ['2026-12-02', 'González'], ['2026-12-09', 'Born'], ['2026-12-16', 'Piquer'], ['2026-12-23', 'Rodríguez'], ['2026-12-30', 'Hoyl']
+];
+/* [inicio, fin, etiqueta, staff]. Feriados aislados van pegados al fin de semana. */
+const TURNOS_FDS = [
+  ['2026-07-04', '2026-07-05', '04–05 jul', 'Meza'], ['2026-07-11', '2026-07-12', '11–12 jul', 'Jiménez'], ['2026-07-16', '2026-07-16', '16 jul (jue, feriado)', 'Browne'], ['2026-07-18', '2026-07-19', '18–19 jul', 'Browne'], ['2026-07-25', '2026-07-26', '25–26 jul', 'Meza'],
+  ['2026-08-01', '2026-08-02', '01–02 ago', 'Rodríguez'], ['2026-08-08', '2026-08-09', '08–09 ago', 'Bórquez'], ['2026-08-15', '2026-08-16', '15–16 ago', 'Jiménez'], ['2026-08-22', '2026-08-23', '22–23 ago', 'Silva (MJ)'], ['2026-08-29', '2026-08-30', '29–30 ago', 'Carrasco'],
+  ['2026-09-05', '2026-09-06', '05–06 sep', 'Browne'], ['2026-09-12', '2026-09-13', '12–13 sep', 'Rodríguez'], ['2026-09-18', '2026-09-20', '18 (vie, feriado)–19–20 sep', 'Born'], ['2026-09-26', '2026-09-27', '26–27 sep', 'Born'],
+  ['2026-10-03', '2026-10-04', '03–04 oct', 'Meza'], ['2026-10-10', '2026-10-12', '10–11–12 (lun, feriado) oct', 'Carrasco'], ['2026-10-17', '2026-10-18', '17–18 oct', 'Silva (MJ)'], ['2026-10-24', '2026-10-25', '24–25 oct', 'Rodríguez'], ['2026-10-31', '2026-11-01', '31 oct–01 nov', 'Bórquez'],
+  ['2026-11-07', '2026-11-08', '07–08 nov', 'Carrasco'], ['2026-11-14', '2026-11-15', '14–15 nov', 'Browne'], ['2026-11-21', '2026-11-22', '21–22 nov', 'Rodríguez'], ['2026-11-28', '2026-11-29', '28–29 nov', 'Meza'],
+  ['2026-12-05', '2026-12-06', '05–06 dic', 'Bórquez'], ['2026-12-08', '2026-12-08', '08 dic (mar, feriado)', 'Bórquez'], ['2026-12-12', '2026-12-13', '12–13 dic', 'Born'], ['2026-12-19', '2026-12-20', '19–20 dic', 'Jiménez'], ['2026-12-25', '2026-12-27', '25 (vie, feriado)–26–27 dic', 'Rodríguez'],
+  ['2027-01-01', '2027-01-03', '01 (vie, feriado)–02–03 ene 2027', 'Born'], ['2027-01-09', '2027-01-10', '09–10 ene 2027', 'Carrasco'], ['2027-01-16', '2027-01-17', '16–17 ene 2027', 'Browne'], ['2027-01-23', '2027-01-24', '23–24 ene 2027', 'Silva (MJ)'], ['2027-01-30', '2027-01-31', '30–31 ene 2027', 'Meza']
+];
+const REUNION_MEMORIA = ['2026-03-26', '2026-05-07', '2026-06-11', '2026-07-23', '2026-09-03', '2026-10-15', '2026-11-26'];
+const CORE_TUTORES = '[completar: fechas y tutor según el maestro CALENDARIOS 2026; alternan sesiones "Académica" e "Investigación"]';
+const DELIRIUM_TUTORES = ['Rodríguez', 'Browne', 'González', 'Hoyl', 'Meza', 'Born'];
+
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+function fmtD(iso) { const [y, m, d] = iso.split('-'); const dt = new Date(+y, +m - 1, +d); return `${DIAS[dt.getDay()]} ${d}-${m}-${y}`; }
+function hoyISO() { const t = new Date(); return new Date(t.getTime() - t.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+function proximaSupervision() { const h = hoyISO(); return SUPERVISION_SJ.find(x => x[0] >= h) || null; }
+function proximoFDS() { const h = hoyISO(); return TURNOS_FDS.find(x => x[1] >= h) || null; }
+function mesDe(iso) { return MESES[+iso.slice(5, 7) - 1] + (iso.slice(0, 4) === '2026' ? '' : ' ' + iso.slice(0, 4)); }
+
+function tablaSupervision() {
+  const ps = proximaSupervision();
+  const byMes = {}; SUPERVISION_SJ.forEach(x => { (byMes[mesDe(x[0])] = byMes[mesDe(x[0])] || []).push(x); });
+  return `<div class="note">${ps ? `<b>Próxima supervisión SJ:</b> ${fmtD(ps[0])} · <b>Dr(a). ${esc(ps[1])}</b>` : 'Fuera del rango del calendario (jul–dic 2026).'}</div>
+    <div class="tblwrap"><table class="tbl sedes cal2026"><tr><th>Mes</th><th>Miércoles → supervisor/a</th></tr>
+    ${Object.keys(byMes).map(m => `<tr><td><b>${m}</b></td><td>${byMes[m].map(x => `<span class="${ps && x[0] === ps[0] ? 'hoy' : ''}">${x[0].slice(8, 10)} ${esc(x[1])}</span>`).join(' · ')}</td></tr>`).join('')}</table></div>
+    <p class="muted">Pool: Silva (MJ), Browne, Meza, Rodríguez, Cáceres, González, Bórquez, Gac, Born, Hoyl, Piquer ("Mapi" (?)); en junio también Guzmán y C. Silva. Reemplazos se anuncian en el grupo y se corrige el maestro (ej.: Piquer reemplaza a Born el 11-11 y a Meza el 16-12).</p>`;
+}
+function tablaFDS() {
+  const pf = proximoFDS();
+  const byMes = {}; TURNOS_FDS.forEach(x => { (byMes[mesDe(x[0])] = byMes[mesDe(x[0])] || []).push(x); });
+  return `<div class="note">${pf ? `<b>Próximo fin de semana:</b> ${esc(pf[2])} · <b>Dr(a). ${esc(pf[3])}</b>` : 'Fuera del rango del calendario (jul 2026–ene 2027).'}</div>
+    <div class="tblwrap"><table class="tbl sedes cal2026"><tr><th>Mes</th><th>Fin de semana → staff</th></tr>
+    ${Object.keys(byMes).map(m => `<tr><td><b>${m}</b></td><td>${byMes[m].map(x => `<span class="${pf && x[0] === pf[0] ? 'hoy' : ''}">${esc(x[2].replace(/ (jul|ago|sep|oct|nov|dic|ene 2027)$/, ''))} ${esc(x[3])}</span>`).join(' · ')}</td></tr>`).join('')}</table></div>
+    <p class="muted">Pool de 8: Meza, Jiménez, Browne, Rodríguez, Bórquez, Silva (MJ), Carrasco, Born (~1 fin de semana cada 7–8 semanas). Permutas privadas no siempre quedan en el maestro: confirmar en el grupo.</p>`;
+}
+function tablaMemoria() {
+  return `<div class="tblwrap"><table class="tbl sedes cal2026"><tr><th>Reunión de memoria (jueves 14:00–15:00)</th></tr><tr><td>${REUNION_MEMORIA.map(fmtD).join(' · ')}</td></tr></table></div>`;
+}
+function tablaCore() {
+  return `<div class="tblwrap"><table class="tbl sedes cal2026"><tr><th>Core Currículum · jueves 15:00–16:30</th></tr><tr><td><span class="ph">${esc(CORE_TUTORES)}</span></td></tr></table></div>`;
+}
+function tablaDelirium() {
+  return `<div class="tblwrap"><table class="tbl sedes cal2026"><tr><th>Seminario de delirium para internos</th></tr><tr><td>Bloques de 3 semanas con tutor rotatorio: ${DELIRIUM_TUTORES.join(', ')}. Fechas por bloque: <span class="ph">[completar según maestro CALENDARIOS 2026]</span>.</td></tr></table></div>`;
+}
+
+/* ---- Poli becados San Joaquín ---- */
+function sjHTML() {
+  return `<p><b>Qué es.</b> Policlínico docente de los <b>becados de Geriatría UC</b> en el Centro Médico San Joaquín. Sala espejo: <i>"en el 36, por atrás; hay una puerta justo antes del 36 por el pasillo"</i>.</p>
+    <p><b>Cuándo.</b> <b>Martes y miércoles PM, 14:00</b>. Nunca lunes (el poli SJ del lunes no es de geriatría). Los becados de Medicina Interna tienen además su poli propio en SJ (solo PM), fuera del calendario de geriatría.</p>
+    <p><b>Rol del rotante externo</b> (Med Int, Med Fam, internos, psiquiatría de enlace): <b>acompaña</b> a los becados; no atiende solo. Admite varios rotantes a la vez. Med Fam: poli becados <b>solo si no hay otra opción</b> (prioridad consulta con tutor propio).</p>
+    <p><b>Regla de los martes y miércoles PM</b> (Dra. Born, 02-10-2026): <i>nadie se queda en Sala UC; si no hay consulta asignada, el rotante va a San Joaquín</i>.</p>
+    <p><b>Supervisión.</b> La supervisión formal con staff rotativo es el <b>miércoles</b> (calendario abajo). El martes también se supervisa, con staff fijo/variable (Dra. Carrasco supervisa martes PM). Si va a supervisar o a acompañar, avise en el grupo qué rotantes irán: el error más frecuente es que el supervisor no sepa quién llega.</p>
+    <h3>Supervisión rotativa de los miércoles · jul–dic 2026</h3>${tablaSupervision()}`;
+}
+/* ---- Turnos de fin de semana ---- */
+function fdsHTML() {
+  return `<p><b>Qué cubre.</b> La <b>visita de hospitalizados de Geriatría</b> (Sala UC Marcoleta e interconsultas) el sábado y domingo, más los feriados pegados al fin de semana, a cargo de un staff. No hay turnos de residencia nocturna de geriatría; el "turno" de los becados de Medicina Interna es su turno propio de Medicina Interna.</p>
+    <p><b>Traspaso del viernes.</b> Quien lleva la sala en la semana pregunta la noche anterior quién pasa visita el fin de semana, para contarle los pacientes que quedaron. Si el calendario dice un nombre pero esa persona está ausente, se resuelve en el grupo.</p>
+    <p><b>Permutas.</b> Se negocian y avisan en el grupo de WhatsApp; el maestro no siempre refleja los cambios privados. Ausencias de la visita diaria (semana) también se cubren por el grupo.</p>
+    <div class="note warn"><b>SOS UCI / Intermedio:</b> <b>no existe un esquema SOS de geriatría</b>. A quién llamar el fin de semana ante una urgencia de un paciente de Sala UC: <span class="ph">[completar a quién llamar]</span>. El Intermedio de San Carlos ofrece turnos remunerados de Medicina Interna (no es cobertura de geriatría).</div>
+    <p><b>Post-turno (becados Med Int):</b> el día siguiente al turno es libre; se pinta naranjo en el calendario semanal. Informar los turnos del mes al coordinador para que queden en la fila del rotante.</p>
+    <h3>Calendario · jul 2026 – ene 2027</h3>${tablaFDS()}`;
+}
+
+/* ---- Equipo docente / organigrama (informe 22-10-2026, sección C). "(?)" = rol inferido. ---- */
+const EQUIPO = [
+  { n: 'Dra. Marcela Carrasco', a: 'Jefatura', r: 'Jefa del Programa / Departamento (?) — interlocutora con la Red UC CHRISTUS; planificación académica; presupuesto; reasignaciones post-aluvión', s: 'Vitacura lun PM (14:30–17 / 14–18); SJ mar (supervisa PM); Santa Lucía jue 08:20' },
+  { n: 'Dra. Trinidad Hoyl', a: 'Jefatura', r: 'Jefa de programa de residentes (?); tutora de Medicina Familiar (asigna a los Med Fam); educación médica (EPAs, webinars)', s: 'Santa Lucía 09–11 y 11–14; Lira / Santa Lucía 14:00; San Carlos jue/vie 11–14; Irarrázaval lun 11–14' },
+  { n: 'Dr. Hugo González', a: 'UGA San Carlos', r: 'Jefe UGA San Carlos desde 17-08-2026; coordinador del calendario semanal de rotantes; tutor seminario delirium y Core', s: 'UGA San Carlos 08:30 todos los días; San Carlos mar 11:00; Esc. Militar vie 14:30/15:00; Bilbao vie B (reubicación)' },
+  { n: 'Dr. Homero Gac', a: 'Domicilio / UC en Casa', r: 'Jefe UGA San Carlos hasta 17-08-2026; visitas domiciliarias / UC en Casa (lleva rotante solo al domicilio); consulta San Carlos sin rotante', s: 'Domicilio lun y mar PM; San Carlos jue/vie AM 11–14' },
+  { n: 'Dra. Marianne Born', a: 'Sala UC Marcoleta', r: 'Sala UC Marcoleta (visita, residentes de geriatría); recibe internos electivos el primer día; supervisa SJ; exámenes de becados; jornadas de bienestar', s: 'Santa Lucía box 1 08:50 (lun, mar, jue AM, vie por medio); El Alba mar 08:50 (cerrado por aluvión); mié AM reservado a beca' },
+  { n: 'Dr. Juan Carlos Rodríguez', a: 'Sala UC Marcoleta', r: 'Visita Sala UC (cubre); tutor de internos; seminario delirium; supervisor SJ; turnos FDS', s: 'Santa Lucía box 8 09:00 (+visita) y box 4 08–13; Esc. Militar box 2/9 (08:30, 14:30); Alcántara box 12/6 14:00; Vitacura' },
+  { n: 'Dra. Ingrid Danke', a: 'HLF', r: 'Coordinadora de becados de Medicina Interna (reparto sala/UGA, bajas, evaluaciones); UGA HLF', s: 'Santa Lucía jue AM; HLF' },
+  { n: 'Dr. Danilo Meza', a: 'HLF', r: 'Geriatra HLF (Hospital La Florida); supervisor SJ; turnos FDS; tutor seminario / Core', s: 'Santa Lucía lun 08–14' },
+  { n: 'Dra. Cinthya Cáceres', a: 'HLF', r: 'UGA HLF (recibe rotantes acreditados); supervisora SJ; Core', s: 'Santa Lucía vie 08:30; mié desde 15:00' },
+  { n: 'Dr. Jorge Browne', a: 'Investigación', r: 'Investigación de becados (planilla de proyectos e "Ideas de investigación"); exámenes; supervisor SJ; turnos FDS', s: 'Vitacura 08:30–14 y 11–14; Santa Lucía jue 08:30–14' },
+  { n: 'Dra. Steffy Bórquez', a: 'Calendarios', r: 'Medicina Interna / oncogeriatría; mantiene el maestro CALENDARIOS 2026 (turnos FDS, supervisión SJ, Core, delirium); supervisora SJ; turnos FDS', s: 'Santa Lucía 11:00 y 14:30' },
+  { n: 'Dra. María Jesús Silva', a: 'Consulta docente', r: 'Consulta + visita; supervisora SJ; turnos FDS', s: 'Santa Lucía box 21 (mar 08:45 y 14:00); Bilbao box 1 (jue 08:30)' },
+  { n: 'Dra. Carmen G. Silva', a: 'Consulta docente', r: 'Consulta docente; supervisa SJ (?)', s: 'Irarrázaval mar 09:00' },
+  { n: 'Dra. Natalie Guzmán', a: 'Consulta docente', r: 'Consulta docente; HLF (?); supervisa SJ', s: 'Irarrázaval mar 14:00' },
+  { n: 'Dra. "Isi" [apellido por confirmar]', a: 'Consulta docente', r: 'Consulta docente; Core; recibe Med Fam', s: 'San Jorge mié 14:20–17 y vie' },
+  { n: 'Dra. "Mapi" / Piquer (?)', a: 'Consulta docente', r: 'Supervisora SJ nov–dic 2026 (reemplaza a Born y Meza)', s: 'SJ 11-11 y 16-12' },
+  { n: 'Dr. Pedro Paulo Marín', a: 'Staff sin rotantes', r: 'Profesor senior; difusión bibliográfica; sin rotantes en el calendario', s: 'Esc. Militar mié bloque A (reubicación)' },
+  { n: 'Dr. Eduardo Valenzuela · Dr. Alejandro Ceriani · Dr. Castro', a: 'Staff sin rotantes', r: 'Staff sin rotantes en el calendario', s: '—' },
+  { n: 'Evelyn / Celia (secretaría) (?)', a: 'Secretaría', r: 'Envían por correo el calendario de rotantes externos y los ingresos de internos', s: '—' }
+];
+const ACUDIR = [
+  ['Jefatura del programa / departamento', 'Dra. Carrasco (?)'],
+  ['Programa de residentes / educación médica', 'Dra. Hoyl (?)'],
+  ['Becados de Medicina Interna (reparto, turnos, evaluación)', 'Dra. Danke'],
+  ['Becados de Medicina Familiar', 'Dra. Hoyl (prioridad Hoyl / Rodríguez)'],
+  ['Internos (tutor) / internos electivos (1er día)', 'Dr. Rodríguez / Dra. Born'],
+  ['UGA San Carlos', 'Dr. González (jefe desde 17-08-2026)'],
+  ['Sala UC Marcoleta', 'Dra. Born (cubre Dr. Rodríguez)'],
+  ['Poli becados San Joaquín', 'Supervisor/a del día (ver calendario) · maestro: Dra. Bórquez'],
+  ['Domicilio / UC en Casa', 'Dr. Gac'],
+  ['HLF (Hospital La Florida)', 'Dra. Cáceres · Dra. Danke · Dr. Meza (requiere acreditación previa)'],
+  ['Investigación de becados', 'Dr. Browne'],
+  ['Calendario semanal de rotantes', 'Dr. González (lo arma los domingos; cambios por el grupo)'],
+  ['Maestro CALENDARIOS 2026 (FDS, SJ, Core, delirium)', 'Dra. Bórquez'],
+  ['Calendario de rotantes externos / ingresos de internos (correo)', 'Secretaría: Evelyn / Celia (?)']
+];
+const AREAS_ORDEN = ['Jefatura', 'UGA San Carlos', 'Sala UC Marcoleta', 'HLF', 'Domicilio / UC en Casa', 'Investigación', 'Calendarios', 'Consulta docente', 'Staff sin rotantes', 'Secretaría'];
+function orgChartHTML() {
+  const box = (n, r, cls) => `<div class="org-node ${cls || ''}"><b>${esc(n)}</b><span>${esc(r)}</span></div>`;
+  return `<div class="org">
+    <div class="org-lvl top">${box('Dra. Marcela Carrasco', 'Jefa del Programa / Departamento (?)', 'jefe')}</div>
+    <div class="org-lvl">${box('Dra. Hoyl', 'Programa de residentes (?) · Med Fam')}${box('Dr. González', 'UGA San Carlos · calendario semanal')}${box('Dra. Born', 'Sala UC Marcoleta')}${box('Dra. Danke', 'Becados Med Int · UGA HLF')}${box('Dr. Gac', 'Domicilio / UC en Casa')}${box('Dr. Browne', 'Investigación')}${box('Dra. Bórquez', 'Maestro CALENDARIOS 2026')}</div>
+    <div class="org-lvl">${box('Sala UC', 'Rodríguez (cubre) · Born', 'area')}${box('HLF', 'Meza · Cáceres · Danke', 'area')}${box('Poli becados SJ', 'Pool de 11 supervisores (mié)', 'area')}${box('Turnos FDS', 'Pool de 8 staff', 'area')}${box('Consulta docente', 'MJ Silva · C. Silva · Guzmán · Isi · Piquer', 'area')}${box('Sin rotantes', 'Marín · Valenzuela · Ceriani · Castro', 'area')}</div>
+  </div>`;
+}
+function equipoHTML() {
+  return `<div class="note">Organigrama <b>inferido</b> del grupo de WhatsApp y calendarios (22-10-2026). Sin teléfonos ni correos. "(?)" = rol inferido, a confirmar por el equipo docente.</div>
+    <div class="card"><h2>Organigrama</h2>${orgChartHTML()}</div>
+    <div class="card"><h2>A quién acudir para qué</h2><div class="tblwrap"><table class="tbl sedes"><tr><th>Tema</th><th>Persona</th></tr>${ACUDIR.map(x => `<tr><td>${esc(x[0])}</td><td><b>${esc(x[1])}</b></td></tr>`).join('')}</table></div></div>
+    ${AREAS_ORDEN.map(a => `<h2 style="font-size:16px;color:var(--uc);margin:14px 0 8px">${esc(a)}</h2>${EQUIPO.filter(e => e.a === a).map(e => `<div class="contact doc"><div class="info"><b>${esc(e.n)}</b><span class="rol">${esc(e.r)}</span><span>Sede habitual / días: ${esc(e.s)}</span></div></div>`).join('')}`).join('')}
+    <p class="muted" style="margin-top:12px">Becados de Geriatría UC 2026 mencionados en el grupo: Anita Lagunas, Alexis, José Manuel Polanco, Eduardo Díaz, Olga, Sofía, Constanza, Marcelo. Bloques y sedes son los de 2026 y cambian con la contingencia (ver Avisos).</p>`;
+}
+
+/* ---- Mi semana (grilla lun–vie AM/PM editable, localStorage; fijos precargados) ---- */
+const MS_DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+const MS_DEFAULT = {
+  am: ['', '08:00 Reunión académica (Zoom, todos)', '', 'Santa Lucía en lo posible', ''],
+  pm: ['Domicilio Dr. Gac (si estoy en UGA)', 'Poli becados SJ 14:00 (si no hay consulta)', 'Poli becados SJ 14:00 · Tarde académica Med Int', '14:00 Reunión 5A (todos) · 15:00–16:30 Core', 'Docencia Dr. González, Esc. Militar (PM)']
+};
+function miSemanaHTML() {
+  const d = store.get('misemana', null) || MS_DEFAULT;
+  const cell = (b, i) => `<td><textarea data-b="${b}" data-i="${i}" placeholder="Docente · sede · box">${esc(d[b][i] || '')}</textarea></td>`;
+  return `<div class="card"><h2>Mi semana <span class="muted" style="font-weight:400;font-size:13px">(editable, se guarda en este celular)</span></h2>
+    <p class="muted">Fijos precargados; anote docente, sede y box según el calendario semanal. Sin datos de pacientes.</p>
+    <div class="tblwrap"><table class="tbl ms" id="msTbl"><tr><th></th>${MS_DIAS.map(x => `<th>${x}</th>`).join('')}</tr>
+      <tr><th>AM</th>${MS_DIAS.map((_, i) => cell('am', i)).join('')}</tr>
+      <tr><th>PM</th>${MS_DIAS.map((_, i) => cell('pm', i)).join('')}</tr></table></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm" id="msCopy">Copiar</button><button class="btn ghost sm" id="msReset">Restablecer fijos</button></div>
+    <p class="muted" id="msSaved" style="margin-top:6px"></p></div>`;
+}
+function bindMiSemana(rerender) {
+  const t = $('#msTbl'); if (!t) return;
+  const read = () => { const o = { am: [], pm: [] }; $$('textarea', t).forEach(x => { o[x.dataset.b][+x.dataset.i] = x.value; }); return o; };
+  t.addEventListener('input', () => { store.set('misemana', read()); $('#msSaved').textContent = 'Guardado ' + new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }); });
+  $('#msReset').onclick = () => { if (confirm('¿Volver a los fijos de la semana?')) { store.del('misemana'); rerender(); } };
+  $('#msCopy').onclick = () => { const o = read(); copyText('MI SEMANA\n' + MS_DIAS.map((dn, i) => `${dn}\n  AM: ${o.am[i] || '—'}\n  PM: ${o.pm[i] || '—'}`).join('\n')); };
+}
+function goMas(sub) { showTab('mas'); renderMas(sub); }
+
 /* ========================= [JS-5] Arranque ========================= */
 renderRotacion();
 renderDir();
 showTab('rotacion');
+if (location.hash === '#equipo' || location.hash === '#cal') goMas(location.hash.slice(1));
 </script>
 </body>
 </html>

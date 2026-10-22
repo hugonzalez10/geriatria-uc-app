@@ -10,7 +10,7 @@
 <!--
   ============================================================
   Geriatría UC · San Carlos de Apoquindo — Guía del rotante
-  Prototipo v0.1 (derivado de geriatria_uc_app.html v0.2)
+  Prototipo v0.2 (derivado de geriatria_uc_app.html v0.3)
   ------------------------------------------------------------
   Archivo único, autocontenido (HTML + CSS + JS vanilla).
   Funciona abriéndolo directamente (file://) y sin conexión.
@@ -32,7 +32,8 @@
     [JS-3]  Directorio hospitalario (editable, localStorage, exportar/importar, campo "cómo ubicarlo")
     [JS-4]  Recursos
     [JS-6]  Plantillas (ingreso HGG, entrega, IC, evolución, nota de traslado / epicrisis breve)
-    [JS-7]  Más: Checklists, Glosario, Calendario, Recursos
+    [JS-7]  Más: Checklists, Glosario, Calendario (+ turnos FDS), Recursos
+    [JS-8]  v0.2: Avisos (banner editable), turnos de fin de semana, equipo del hospital
     [JS-5]  Arranque
   ============================================================
 -->
@@ -225,6 +226,26 @@ pre.copytxt{white-space:pre-wrap;word-break:break-word;font-size:13px;background
 .pauta .crit select{min-height:40px;border:1px solid var(--line);border-radius:8px;padding:4px;width:100%}
 .pauta .crit textarea{grid-column:1/3;min-height:40px;border:1px solid var(--line);border-radius:8px;padding:6px;width:100%;font-size:13px}
 .calimg{max-width:100%;border-radius:12px;border:1px solid var(--line);display:block;margin-top:10px}
+/* v0.3 — Banner de avisos, organigrama, calendarios 2026, Mi semana */
+.banner{background:var(--warn-bg);border:1px solid #efd58a;border-left:5px solid var(--warn);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px}
+.banner .bh{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--warn);margin-bottom:6px}
+.banner pre.bt{white-space:pre-wrap;word-break:break-word;font:inherit;font-size:14px;margin:0}
+.org{display:flex;flex-direction:column;align-items:center}
+.org-lvl{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;position:relative;padding-top:18px;width:100%}
+.org-lvl::before{content:'';position:absolute;top:0;left:50%;width:2px;height:18px;background:var(--uc-2);opacity:.5}
+.org-lvl.top{padding-top:0}.org-lvl.top::before{display:none}
+.org-node{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;flex:1 1 120px;max-width:170px;text-align:center;font-size:12px;line-height:1.3}
+.org-node b{display:block;font-size:13px;color:var(--uc);margin-bottom:2px}
+.org-node span{color:var(--muted)}
+.org-node.jefe{border-color:var(--uc);background:var(--uc-soft);max-width:280px;flex-basis:240px}
+.org-node.area{background:#f7f9fb;border-style:dashed}
+.contact.doc .info span{white-space:normal;overflow:visible}
+.contact.doc .info span.rol{color:var(--text);margin:2px 0}
+table.tbl.cal2026 td span.hoy{background:var(--warn-bg);border-radius:6px;padding:0 4px;font-weight:700}
+table.tbl.cal2026 td span{white-space:nowrap}
+table.tbl.ms{min-width:640px}
+table.tbl.ms td{padding:4px}
+table.tbl.ms textarea{width:100%;min-height:72px;border:1px solid var(--line);border-radius:8px;padding:6px;font-size:12px;resize:vertical;background:#fff}
 </style>
 </head>
 <body>
@@ -250,7 +271,7 @@ pre.copytxt{white-space:pre-wrap;word-break:break-word;font-size:13px;background
   <!-- Pestaña 5: Más (Checklists, Glosario, Calendario, Recursos) -->
   <section class="view" id="view-mas"></section>
 
-  <footer>Prototipo v0.1 · Geriatría UC CHRISTUS · San Carlos de Apoquindo · No reemplaza el juicio clínico</footer>
+  <footer>Prototipo v0.2 · Geriatría UC CHRISTUS · San Carlos de Apoquindo · No reemplaza el juicio clínico</footer>
 </main>
 
 <nav class="bottom" id="nav">
@@ -321,7 +342,7 @@ function previewCopy(title, txt) {
 }
 
 const TABS = {
-  rotacion: { title: 'Rotación San Carlos', sub: 'Sala UC · UGA · día tipo · reglas' },
+  rotacion: { title: 'Rotación San Carlos', sub: 'Avisos · UGA · Sala UC · fin de semana · equipo' },
   plant:    { title: 'Plantillas', sub: 'Ingreso HGG · entrega · IC · evolución · traslado' },
   calc:     { title: 'Calculadoras', sub: 'Escalas de uso hospitalario en Geriatría' },
   dir:      { title: 'Directorio', sub: 'Hospital San Carlos de Apoquindo (editable)' },
@@ -354,19 +375,21 @@ $('#btnBack').addEventListener('click', () => { if (backFn) backFn(); });
 /* Texto de la rotación hospitalaria. Los [corchetes] son PLACEHOLDERS a completar por el equipo docente.
    NOTA: no se han inventado horarios, lugares, nombres ni teléfonos. */
 const ROTACION_HTML = `
+<div id="avisoBox"></div>
 <div class="card">
   <h2>Bienvenido/a a Geriatría UC · San Carlos de Apoquindo</h2>
   <p>Esta guía reúne lo práctico de la rotación hospitalaria en el <b>Hospital Clínico UC San Carlos de Apoquindo</b> (Camino El Alba 12351, Las Condes): cómo funciona Sala UC y la UGA, el día tipo, las reglas, a quién ubicar y qué escalas usar.</p>
-  <p class="muted">Jefe de Geriatría UC: Dr. Homero Gac · Coordinador de rotantes: Dr. Hugo González.</p>
+  <p class="muted">Jefa del Programa / Departamento: Dra. Marcela Carrasco (?) · Jefe UGA San Carlos: Dr. Hugo González (desde 17-08-2026; antes Dr. Homero Gac) · Coordinador del calendario de rotantes: Dr. Hugo González.</p>
   <div class="note">Los textos entre <span class="ph">[corchetes]</span> son espacios a completar por el equipo docente antes de distribuir la app. Teléfonos y anexos van en la pestaña <b>Directorio</b> (vacía a propósito).</div>
 </div>
 
 <div class="card">
   <h2>Sala UC y UGA</h2>
   <h3>Sala UC</h3>
-  <p>Pacientes hospitalizados a cargo del equipo de Geriatría en el Hospital Clínico. <b>Un solo rotante por día.</b> Entrega de turno a partir de la planilla del servicio (Drive <b>"01 SALA UC"</b>): una fila por paciente (cama, datos, antecedentes, fármacos, sd. geriátricos, diagnóstico en 4 ejes, exámenes, plan).</p>
+  <p>Pacientes hospitalizados a cargo del equipo de Geriatría (<b>Hospital Clínico Marcoleta</b>) e interconsultas. Visita: Dra. Marianne Born con los residentes de geriatría; cubre el Dr. Juan Carlos Rodríguez. <b>Un solo rotante por día</b> (puesto fijo de la semana). Martes y miércoles PM nadie queda en sala: sin consulta, el rotante va al poli becados SJ. Entrega de turno a partir de la planilla del servicio (Drive <b>"01 SALA UC"</b>): una fila por paciente (cama, datos, antecedentes, fármacos, sd. geriátricos, diagnóstico en 4 ejes, exámenes, plan).</p>
   <h3>UGA · Unidad Geriátrica de Agudos</h3>
-  <p>Hospitalización de agudos con manejo geriátrico. Inicio <b>08:30</b>. Tratantes: <b>UGA-Gac</b> y <b>UGA-González</b>. Puesto fijo de la semana completa: no se cambia al rotante a mitad de semana.</p>
+  <p>Hospitalización de agudos con manejo geriátrico en San Carlos. <b>Jefe de UGA: Dr. Hugo González (desde 17-08-2026)</b>; antes Dr. Homero Gac. Visita <b>08:30 todos los días</b>. <b>1 rotante fijo por semana</b> (habitualmente becado de Medicina Interna, que alterna una semana UGA / una semana Sala UC); no se cambia al rotante a mitad de semana. Post-turno: día siguiente libre. Extensión: domicilio del Dr. Gac (lun y mar PM) con el rotante de UGA. Consulta en San Carlos jue/vie 11–14: Dr. Gac sin rotante; Dra. Hoyl con rotante de Medicina Familiar.</p>
+  <div class="note warn"><b>Contingencia:</b> desde el 08-10-2026 la clínica está cerrada por el aluvión; los rotantes de UGA fueron reubicados a Marcoleta / HLF y los internos a Sala UC. Todo lo presencial de San Carlos queda <b>[pendiente reapertura]</b>. Ver Avisos.</div>
   <p class="muted">Ubicación de la UGA (piso / sector): <span class="ph">[completar]</span>. Lugar de la entrega de turno: <span class="ph">[completar]</span>.</p>
 </div>
 
@@ -381,10 +404,16 @@ const ROTACION_HTML = `
     <tr><td><span class="ph">[hora]</span></td><td><b>Interconsultas</b> a otros servicios (ver Directorio → Especialistas de turno) y respuesta a IC a Geriatría.</td></tr>
     <tr><td><span class="ph">[hora]</span></td><td><b>Pendientes</b>: exámenes, conversación con familia, planificación del alta (UC en Casa, ELEAM, domicilio), actualizar la planilla para la próxima entrega.</td></tr>
   </table></div>
-  <details>
-    <summary>Fin de semana y turnos</summary>
-    <p>Fin de semana: cobertura de <b>UCI / Intermedio en modalidad "SOS"</b> (a llamado) <span class="ph">[detallar quién y cómo]</span>. Los turnos del becado son ~4 al mes, con <b>post-turno libre</b> (día siguiente).</p>
-  </details>
+</div>
+
+<div class="card">
+  <h2>Turnos de fin de semana</h2>
+  <div id="fdsBox"></div>
+</div>
+
+<div class="card">
+  <h2>Equipo del hospital</h2>
+  <div id="eqBox"></div>
 </div>
 
 <div class="card">
@@ -415,7 +444,7 @@ const ROTACION_HTML = `
   <p><span class="tag">UGA</span> Quien está en UGA cubre el <b>domicilio del Dr. Gac</b> (lunes y martes PM).</p>
   <p><span class="tag">Todos</span> Martes 08:00 reunión académica (Zoom) · Jueves 14:00 reunión del 5° piso (Edificio Académico, Diagonal Paraguay <span class="ph">[n°]</span>).</p>
   <h3>Reglas generales</h3>
-  <p>• Evolución diaria completa antes de la visita. • Avisar al coordinador cambios de turnos apenas se sepan. • La planilla de entrega se actualiza antes de irse. • No dejar datos de pacientes en el celular (las plantillas no piden nombre ni RUT).</p>
+  <p>• Evolución diaria completa antes de la visita. • Avisar al coordinador cambios de turnos y ausencias apenas se sepan (quedan en la hoja "Ausencias" del Sheet Rotaciones_Geriatria). • Habilitar el perfil TrakCare de San Carlos antes de llegar (demora; buscar por RUT o usar el escritorio clínico, que muestra todos los centros). • Tope de rotantes simultáneos: en discusión por el equipo docente <span class="ph">[confirmar]</span>. • La planilla de entrega se actualiza antes de irse. • No dejar datos de pacientes en el celular (las plantillas no piden nombre ni RUT).</p>
   <div class="note warn"><b>Trabajo final (VGI):</b> cada rotante entrega una Valoración Geriátrica Integral en su última semana, <b>a más tardar el miércoles de la última semana</b>. Formato: Plantillas → Ingreso / Evaluación geriátrica (HGG).</div>
 </div>
 
@@ -431,8 +460,10 @@ const ROTACION_HTML = `
 <div class="card">
   <h2>Cómo llegar</h2>
   <p><b>Hospital Clínico UC San Carlos de Apoquindo</b><br>Camino El Alba 12351, Las Condes.</p>
-  <p>Estacionamiento para rotantes: <span class="ph">[completar]</span>.</p>
-  <p>Acceso / ingreso del personal: <span class="ph">[completar]</span>. Casilleros y residencia: <span class="ph">[completar]</span>.</p>
+  <p>Estacionamiento para becados: algunos entran con tarjeta, otros con la credencial (28-08-2026). Pedir tarjeta: <span class="ph">[completar dónde]</span>.</p>
+  <p>Acceso / ingreso del personal: con credencial institucional. Puerta y horario: <span class="ph">[completar]</span>. Casilleros y residencia: <span class="ph">[completar]</span>.</p>
+  <p>Intermedio / UCI: no hay SOS de geriatría; el Intermedio ofrece turnos remunerados de Medicina Interna, independientes de la rotación. Urgencia: derivar con criterio según saturación (pizarra Saturno muestra al jefe de turno).</p>
+  <p class="muted">Vigente hasta la reapertura post-aluvión: <span class="ph">[por confirmar]</span>.</p>
   <a class="btn secondary block" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Camino+El+Alba+12351%2C+Las+Condes">Abrir en Maps ↗</a>
 </div>
 
@@ -443,14 +474,16 @@ const ROTACION_HTML = `
 </div>`;
 
 const CHECK_DEFAULT = [
-  'Credencial / identificación institucional',
-  'Acceso a TrakCare y a Prisma (usuario y clave)',
+  'Credencial / identificación institucional (acceso y estacionamiento en San Carlos)',
+  'Acceso a TrakCare y a Prisma (usuario y clave); perfil TrakCare habilitado en San Carlos (y Marcoleta / HLF si me reubican)',
+  'Seguro de responsabilidad civil al día',
+  'Si me reubican a HLF: acreditación / documentación previa entregada',
   'Acceso a la planilla Drive "01 SALA UC" (pedir permiso de edición)',
   'Ingresar al grupo de WhatsApp del servicio',
   'Leer el protocolo de delirium de la unidad',
   'Acceso a red Wi-Fi institucional',
   'Delantal / uniforme y casillero',
-  'Presentación con tratantes de UGA (Dr. Gac / Dr. González) y residentes',
+  'Presentación con el jefe de UGA (Dr. González), Dr. Gac y residentes',
   'Conocer ubicación de la UGA, estación de enfermería y residencia',
   'Revisar horario de entrega de turno y visita',
   'Completar documentos de la rotación (firma de asistencia, confidencialidad)'
@@ -459,6 +492,9 @@ const CHECK_DEFAULT = [
 function renderRotacion() {
   const v = $('#view-rotacion');
   v.innerHTML = ROTACION_HTML;
+  $('#avisoBox').innerHTML = avisoHTML(); bindAviso(renderRotacion);
+  $('#fdsBox').innerHTML = fdsHTML();
+  $('#eqBox').innerHTML = equipoSCHTML();
   renderChecklist();
   $('#chkAdd').onclick = () => { const l = store.get('chk', CHECK_DEFAULT); l.push({ t: '', d: false }); store.set('chk', l); renderChecklist(true); };
   $('#chkReset').onclick = () => { if (confirm('¿Restablecer el checklist original?')) { store.set('chk', CHECK_DEFAULT); renderChecklist(); } };
@@ -1521,11 +1557,13 @@ const CHECKLISTS = [
 ];
 
 const GLOSARIO = [
-  ['UGA', 'Unidad Geriátrica de Agudos (Hospital Clínico San Carlos de Apoquindo). Hospitalización de agudos con manejo geriátrico; puesto fijo semanal del rotante, inicio 08:30. Tratantes: UGA-Gac y UGA-González.'],
+  ['UGA', 'Unidad Geriátrica de Agudos (Hospital Clínico San Carlos de Apoquindo). Hospitalización de agudos con manejo geriátrico; 1 rotante fijo por semana, visita 08:30. Jefe: Dr. Hugo González (desde 17-08-2026); antes Dr. Homero Gac.'],
+  ['Turno de fin de semana', 'Visita de hospitalizados de Geriatría (Sala UC Marcoleta e interconsultas) sábado, domingo y feriados pegados, a cargo de un staff del pool de 8. Traspaso el viernes por el grupo. Calendario: Rotación → Turnos de fin de semana.'],
   ['01 SALA UC', 'Planilla compartida en Drive con la que se hace la entrega de turno de Sala UC: una fila por paciente (cama, datos, antecedentes, fármacos, sd. geriátricos, dx en 4 ejes, exámenes, plan). Actualizarla antes de irse.'],
-  ['SOS (UCI / Intermedio)', 'Modalidad de cobertura "a llamado" de UCI / Intermedio durante el fin de semana. Detalle: [completar].'],
+  ['SOS (UCI / Intermedio)', 'No existe un esquema SOS de geriatría. El Intermedio de San Carlos ofrece turnos remunerados de Medicina Interna (independientes de la rotación). A quién llamar el fin de semana por un paciente de Sala UC: [completar].'],
   ['Prisma', 'Sistema institucional UC CHRISTUS complementario a TrakCare (resultados / imágenes). Solicitar acceso el primer día.'],
-  ['Post-turno', 'Día siguiente al turno, libre para el becado (turnos ~4/mes).'],
+  ['Post-turno', 'Día siguiente al turno de Medicina Interna, libre para el becado; se pinta naranjo en el calendario semanal.'],
+  ['HLF', 'Hospital La Florida (UGA HLF: Dra. Cáceres, Dra. Danke, Dr. Meza). Destino de reubicación durante el cierre de San Carlos; requiere acreditación previa.'],
   ['Sala UC', 'Pacientes hospitalizados a cargo del equipo de Geriatría en el Hospital Clínico. Un solo rotante por día; entrega de turno con planilla por paciente (cama, datos, antecedentes, fármacos, sd. geriátricos, dx, exámenes, plan).'],
   ['UC en Casa', 'Programa de hospitalización domiciliaria UC CHRISTUS: atención hospitalaria en el domicilio para pacientes seleccionados (alternativa a la hospitalización convencional o alta precoz).'],
   ['Domicilio Dr. Gac', 'Visitas domiciliarias geriátricas del Dr. Gac (lunes y martes PM); las cubre el rotante que está en UGA esa semana.'],
@@ -1564,7 +1602,7 @@ function renderMas(sub) {
     const items = [
       ['check', 'CK', 'Checklists', 'Antidelirium · caídas · UPP · aspiración · desprescripción · alta segura · previo al turno'],
       ['glos', 'GL', 'Glosario hospitalario', 'UGA, Sala UC, 01 SALA UC, UC en Casa, LET, IDDSI, HGG…'],
-      ['cal', 'CA', 'Calendario de rotantes', 'Se publica cada semana — pegar link'],
+      ['cal', 'CA', 'Calendario de rotantes', 'Link semanal · turnos de fin de semana'],
       ['rec', 'RF', 'Recursos', 'FRAX Chile · Beers · STOPP/START · MINSAL · SOCGER']
     ];
     v.innerHTML = `<div class="list">${items.map(i => `<button class="item" data-sub="${i[0]}"><div class="ic">${i[1]}</div><div class="t"><b>${i[2]}</b><span>${i[3]}</span></div><div class="chev">›</div></button>`).join('')}</div>`;
@@ -1603,7 +1641,8 @@ function renderMas(sub) {
       <div class="row"><button class="btn" id="calSave">Guardar</button>${link ? `<a class="btn secondary" target="_blank" rel="noopener" href="${esc(link)}">Abrir</a><button class="btn ghost" id="calDel">Quitar</button>` : ''}</div>
       ${link && isImg ? `<img class="calimg" src="${esc(link)}" alt="Calendario semanal">` : ''}
       ${link && !isImg ? `<p class="muted" style="margin-top:8px">El link no es una imagen directa; se abre en una pestaña nueva. Si es Drive, use "Abrir".</p>` : ''}
-      <p class="muted" style="margin-top:10px">Recuerde: avisar al coordinador los cambios de turno apenas se sepan.</p></div>`;
+      <p class="muted" style="margin-top:10px">Recuerde: avisar al coordinador los cambios de turno apenas se sepan.</p></div>
+      <div class="card"><h2>Turnos de fin de semana · jul 2026 – ene 2027</h2>${tablaFDS()}<p class="muted">Maestro CALENDARIOS 2026 (Dra. Bórquez). Traspaso del viernes y permutas por el grupo.</p></div>`;
     $('#calSave').onclick = () => { let u = $('#calUrl').value.trim(); if (u && !/^(https?:\/\/|data:image\/)/i.test(u)) u = 'https://' + u; store.set('calLink', u); renderMas('cal'); toast('Link guardado'); };
     const d = $('#calDel'); if (d) d.onclick = () => { store.del('calLink'); renderMas('cal'); };
   } else if (sub === 'rec') {
@@ -1612,6 +1651,97 @@ function renderMas(sub) {
   }
   window.scrollTo(0, 0);
 }
+/* ========================= [JS-8] v0.2: Avisos, Turnos FDS, Equipo San Carlos ========================= */
+/* Fuente: informe "Geriatría UC — análisis del grupo WhatsApp + calendarios Drive (22-10-2026)". Sin teléfonos, correos ni datos de pacientes. */
+/* ---- Aviso / contingencia (banner editable, localStorage) ---- */
+const AVISO_DEFAULT = `CONTINGENCIA · Aluvión San Carlos de Apoquindo (08-10-2026)
+• Clínica San Carlos cerrada (≥ 2 semanas desde el 08-10); agendas de San Carlos y El Alba bloqueadas octubre–noviembre 2026.
+• Consultas reubicadas a Vitacura, Alcántara, Santa Lucía, Bilbao y Escuela Militar o telemedicina. Reubicaciones conocidas: Dr. Gac → Bilbao (vie); Dr. González → Bilbao (vie, bloque B); Dr. Marín → Escuela Militar (mié, bloque A).
+• Rotantes de UGA San Carlos reubicados a Marcoleta / HLF; internos a Sala UC.
+• Fecha de reapertura de San Carlos / El Alba: [por confirmar].
+Actualizado: 22-10-2026 (editar este aviso con el botón).`;
+function avisoHTML() {
+  const a = store.get('aviso', null) || { t: AVISO_DEFAULT, u: '' };
+  return `<div class="banner" id="banner"><div class="bh"><b>⚠ Avisos y contingencias</b><button class="btn ghost sm" id="avisoEdit">Editar</button></div>
+    <pre class="bt">${esc(a.t)}</pre>${a.u ? `<div class="muted" style="font-size:12px;margin-top:4px">Editado en este celular: ${esc(a.u)}</div>` : ''}</div>`;
+}
+function bindAviso(rerender) {
+  const b = $('#avisoEdit'); if (!b) return;
+  b.onclick = () => {
+    const a = store.get('aviso', null) || { t: AVISO_DEFAULT, u: '' };
+    openModal(`<h2>Editar aviso</h2><p class="muted">Se guarda solo en este celular. No escribir datos de pacientes.</p>
+      <div class="field"><textarea id="avTxt" style="min-height:200px">${esc(a.t)}</textarea></div>
+      <div class="row"><button class="btn" id="avSave">Guardar</button><button class="btn ghost" id="avReset">Restablecer</button><button class="btn ghost" id="avCancel">Cancelar</button></div>`);
+    $('#avSave').onclick = () => { store.set('aviso', { t: $('#avTxt').value, u: new Date().toLocaleDateString('es-CL') }); closeModal(); rerender(); toast('Aviso guardado'); };
+    $('#avReset').onclick = () => { if (confirm('¿Volver al aviso original?')) { store.del('aviso'); closeModal(); rerender(); } };
+    $('#avCancel').onclick = closeModal;
+  };
+}
+
+/* ---- Turnos de fin de semana (maestro CALENDARIOS 2026, mantiene Dra. Bórquez) ---- */
+/* [inicio, fin, etiqueta, staff]. Feriados aislados van pegados al fin de semana. */
+const TURNOS_FDS = [
+  ['2026-07-04', '2026-07-05', '04–05 jul', 'Meza'], ['2026-07-11', '2026-07-12', '11–12 jul', 'Jiménez'], ['2026-07-16', '2026-07-16', '16 jul (jue, feriado)', 'Browne'], ['2026-07-18', '2026-07-19', '18–19 jul', 'Browne'], ['2026-07-25', '2026-07-26', '25–26 jul', 'Meza'],
+  ['2026-08-01', '2026-08-02', '01–02 ago', 'Rodríguez'], ['2026-08-08', '2026-08-09', '08–09 ago', 'Bórquez'], ['2026-08-15', '2026-08-16', '15–16 ago', 'Jiménez'], ['2026-08-22', '2026-08-23', '22–23 ago', 'Silva (MJ)'], ['2026-08-29', '2026-08-30', '29–30 ago', 'Carrasco'],
+  ['2026-09-05', '2026-09-06', '05–06 sep', 'Browne'], ['2026-09-12', '2026-09-13', '12–13 sep', 'Rodríguez'], ['2026-09-18', '2026-09-20', '18 (vie, feriado)–19–20 sep', 'Born'], ['2026-09-26', '2026-09-27', '26–27 sep', 'Born'],
+  ['2026-10-03', '2026-10-04', '03–04 oct', 'Meza'], ['2026-10-10', '2026-10-12', '10–11–12 (lun, feriado) oct', 'Carrasco'], ['2026-10-17', '2026-10-18', '17–18 oct', 'Silva (MJ)'], ['2026-10-24', '2026-10-25', '24–25 oct', 'Rodríguez'], ['2026-10-31', '2026-11-01', '31 oct–01 nov', 'Bórquez'],
+  ['2026-11-07', '2026-11-08', '07–08 nov', 'Carrasco'], ['2026-11-14', '2026-11-15', '14–15 nov', 'Browne'], ['2026-11-21', '2026-11-22', '21–22 nov', 'Rodríguez'], ['2026-11-28', '2026-11-29', '28–29 nov', 'Meza'],
+  ['2026-12-05', '2026-12-06', '05–06 dic', 'Bórquez'], ['2026-12-08', '2026-12-08', '08 dic (mar, feriado)', 'Bórquez'], ['2026-12-12', '2026-12-13', '12–13 dic', 'Born'], ['2026-12-19', '2026-12-20', '19–20 dic', 'Jiménez'], ['2026-12-25', '2026-12-27', '25 (vie, feriado)–26–27 dic', 'Rodríguez'],
+  ['2027-01-01', '2027-01-03', '01 (vie, feriado)–02–03 ene 2027', 'Born'], ['2027-01-09', '2027-01-10', '09–10 ene 2027', 'Carrasco'], ['2027-01-16', '2027-01-17', '16–17 ene 2027', 'Browne'], ['2027-01-23', '2027-01-24', '23–24 ene 2027', 'Silva (MJ)'], ['2027-01-30', '2027-01-31', '30–31 ene 2027', 'Meza']
+];
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+function fmtD(iso) { const [y, m, d] = iso.split('-'); const dt = new Date(+y, +m - 1, +d); return `${DIAS[dt.getDay()]} ${d}-${m}-${y}`; }
+function hoyISO() { const t = new Date(); return new Date(t.getTime() - t.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+function proximoFDS() { const h = hoyISO(); return TURNOS_FDS.find(x => x[1] >= h) || null; }
+function mesDe(iso) { return MESES[+iso.slice(5, 7) - 1] + (iso.slice(0, 4) === '2026' ? '' : ' ' + iso.slice(0, 4)); }
+
+function tablaFDS() {
+  const pf = proximoFDS();
+  const byMes = {}; TURNOS_FDS.forEach(x => { (byMes[mesDe(x[0])] = byMes[mesDe(x[0])] || []).push(x); });
+  return `<div class="note">${pf ? `<b>Próximo fin de semana:</b> ${esc(pf[2])} · <b>Dr(a). ${esc(pf[3])}</b>` : 'Fuera del rango del calendario (jul 2026–ene 2027).'}</div>
+    <div class="tblwrap"><table class="tbl sedes cal2026"><tr><th>Mes</th><th>Fin de semana → staff</th></tr>
+    ${Object.keys(byMes).map(m => `<tr><td><b>${m}</b></td><td>${byMes[m].map(x => `<span class="${pf && x[0] === pf[0] ? 'hoy' : ''}">${esc(x[2].replace(/ (jul|ago|sep|oct|nov|dic|ene 2027)$/, ''))} ${esc(x[3])}</span>`).join(' · ')}</td></tr>`).join('')}</table></div>
+    <p class="muted">Pool de 8: Meza, Jiménez, Browne, Rodríguez, Bórquez, Silva (MJ), Carrasco, Born (~1 fin de semana cada 7–8 semanas). Permutas privadas no siempre quedan en el maestro: confirmar en el grupo.</p>`;
+}
+/* ---- Turnos de fin de semana ---- */
+function fdsHTML() {
+  return `<p><b>Qué cubre.</b> La <b>visita de hospitalizados de Geriatría</b> (Sala UC Marcoleta e interconsultas) el sábado y domingo, más los feriados pegados al fin de semana, a cargo de un staff. No hay turnos de residencia nocturna de geriatría; el "turno" de los becados de Medicina Interna es su turno propio de Medicina Interna.</p>
+    <p><b>Traspaso del viernes.</b> Quien lleva la sala en la semana pregunta la noche anterior quién pasa visita el fin de semana, para contarle los pacientes que quedaron. Si el calendario dice un nombre pero esa persona está ausente, se resuelve en el grupo.</p>
+    <p><b>Permutas.</b> Se negocian y avisan en el grupo de WhatsApp; el maestro no siempre refleja los cambios privados. Ausencias de la visita diaria (semana) también se cubren por el grupo.</p>
+    <div class="note warn"><b>SOS UCI / Intermedio:</b> <b>no existe un esquema SOS de geriatría</b>. A quién llamar el fin de semana ante una urgencia de un paciente de Sala UC: <span class="ph">[completar a quién llamar]</span>. El Intermedio de San Carlos ofrece turnos remunerados de Medicina Interna (no es cobertura de geriatría).</div>
+    <p><b>Post-turno (becados Med Int):</b> el día siguiente al turno es libre; se pinta naranjo en el calendario semanal. Informar los turnos del mes al coordinador para que queden en la fila del rotante.</p>
+    <h3>Calendario · jul 2026 – ene 2027</h3>${tablaFDS()}`;
+}
+
+
+/* ---- Equipo del hospital San Carlos (quién hace qué) ---- */
+const EQUIPO_SC = [
+  ['UGA San Carlos', 'Dr. Hugo González (jefe desde 17-08-2026; visita 08:30 diaria). Antes: Dr. Homero Gac.'],
+  ['Sala UC (hospitalizados de Geriatría, Marcoleta) e interconsultas', 'Dra. Marianne Born (visita; residentes de geriatría). Cubre: Dr. Juan Carlos Rodríguez.'],
+  ['Domicilio / UC en Casa', 'Dr. Homero Gac (lun y mar PM; lleva al rotante de UGA).'],
+  ['Consulta en San Carlos (jue/vie 11–14)', 'Dr. Gac sin rotante · Dra. Hoyl con rotante de Medicina Familiar. [pendiente reapertura]'],
+  ['Visita de fin de semana', 'Pool de 8 staff rotativos: Meza, Jiménez, Browne, Rodríguez, Bórquez, Silva (MJ), Carrasco, Born (calendario más abajo).'],
+  ['Becados de Medicina Interna (reparto sala / UGA, turnos)', 'Dra. Ingrid Danke.'],
+  ['Calendario semanal de rotantes', 'Dr. Hugo González (domingos; cambios por el grupo).'],
+  ['Jefatura del programa / departamento', 'Dra. Marcela Carrasco (?).'],
+  ['Intermedio / UCI San Carlos', 'No hay SOS de geriatría. El Intermedio ofrece turnos remunerados de Medicina Interna (independientes de la rotación).']
+];
+function orgSCHTML() {
+  const box = (n, r, cls) => `<div class="org-node ${cls || ''}"><b>${esc(n)}</b><span>${esc(r)}</span></div>`;
+  return `<div class="org">
+    <div class="org-lvl top">${box('Dra. Marcela Carrasco', 'Jefa del Programa / Departamento (?)', 'jefe')}</div>
+    <div class="org-lvl">${box('Dr. González', 'Jefe UGA San Carlos · calendario semanal')}${box('Dra. Born', 'Sala UC Marcoleta')}${box('Dr. Gac', 'Domicilio / UC en Casa')}${box('Dra. Danke', 'Becados Med Int')}</div>
+    <div class="org-lvl">${box('UGA', '1 rotante fijo (Med Int)', 'area')}${box('Sala UC', 'Rodríguez cubre · 1 rotante/día', 'area')}${box('Fin de semana', 'Pool de 8 staff', 'area')}</div>
+  </div>`;
+}
+function equipoSCHTML() {
+  return `<p class="muted">Quién hace qué en el hospital. "(?)" = rol inferido; sin teléfonos ni correos (van en Directorio).</p>${orgSCHTML()}
+    <div class="tblwrap" style="margin-top:10px"><table class="tbl sedes"><tr><th>Área</th><th>Responsable</th></tr>${EQUIPO_SC.map(x => `<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td></tr>`).join('')}</table></div>
+    <a class="btn secondary block" style="margin-top:10px" target="_blank" rel="noopener" href="https://hugonzalez10.github.io/geriatria-uc-app/#equipo">Organigrama completo de Geriatría UC ↗</a>`;
+}
+function goMas(sub) { showTab('mas'); renderMas(sub); }
+
 /* ========================= [JS-5] Arranque ========================= */
 renderRotacion();
 renderDir();
