@@ -381,7 +381,6 @@ const ROTACION_HTML = `
   <p>🏥 <b>Clínica San Carlos de Apoquindo</b> · Camino El Alba 12351, Las Condes</p>
   <p>👨‍⚕️ <b>Jefe UGA y coordinador de rotantes:</b> Dr. Hugo González</p>
   <p>🏛️ <b>Jefa del Programa:</b> Dra. Marcela Carrasco (?)</p>
-  <p class="muted">ℹ️ Sala UC es en <b>Marcoleta</b> → <a href="https://hugonzalez10.github.io/geriatria-uc-app/" target="_blank" rel="noopener">app general</a></p>
   <div class="note">✏️ Lo que está entre <span class="ph">[corchetes]</span> falta completar · 📞 Teléfonos en <b>Directorio</b></div>
 </div>
 
@@ -389,9 +388,7 @@ const ROTACION_HTML = `
   <h2>🛏️ UGA · Unidad Geriátrica de Agudos</h2>
   <p>🩺 <b>Visita: desde las 09:00</b>, todos los días</p>
   <p>👥 <b>Reunión multidisciplinaria:</b> miércoles 08:30 · <b>gimnasio</b></p>
-  <p>🧑‍⚕️ <b>1 rotante fijo por semana</b> (no se cambia a mitad de semana)</p>
   <p>🏠 <b>Lun y mar PM:</b> domicilio con Dr. Gac</p>
-  <p>🗓️ <b>Consulta jue/vie 11–14:</b> Dr. Gac (sin rotante) · Dra. Hoyl (con rotante MedFam)</p>
   <p class="muted">📍 Ubicación UGA: <span class="ph">[completar]</span> · Entrega de turno: <span class="ph">[completar]</span></p>
 </div>
 
@@ -1551,7 +1548,7 @@ const CHECKLISTS = [
 ];
 
 const GLOSARIO = [
-  ['UGA', 'Unidad Geriátrica de Agudos (Clínica San Carlos de Apoquindo). Hospitalización de agudos con manejo geriátrico; 1 rotante fijo por semana, visita desde 09:00; reunión multidisciplinaria miércoles 08:30 (gimnasio). Jefe: Dr. Hugo González; antes Dr. Homero Gac.'],
+  ['UGA', 'Unidad Geriátrica de Agudos (Clínica San Carlos de Apoquindo). Hospitalización de agudos con manejo geriátrico; visita desde 09:00; reunión multidisciplinaria miércoles 08:30 (gimnasio). Jefe: Dr. Hugo González; antes Dr. Homero Gac.'],
   ['SOS (UCI / Intermedio)', 'No existe un esquema SOS de geriatría. El Intermedio de San Carlos ofrece turnos remunerados de Medicina Interna (independientes de la rotación).'],
   ['Prisma', 'Sistema institucional UC CHRISTUS complementario a TrakCare (resultados / imágenes). Solicitar acceso el primer día.'],
   ['Post-turno', 'Día siguiente al turno de Medicina Interna, libre para el becado; se pinta naranjo en el calendario semanal.'],
@@ -1676,7 +1673,6 @@ function bindAviso(rerender) {
 const EQUIPO_SC = [
   ['🛏️ UGA', 'Dr. Hugo González (jefe)'],
   ['🏠 Domicilio / UC en Casa', 'Dr. Homero Gac · lun y mar PM, con el rotante UGA'],
-  ['🗓️ Consulta San Carlos (jue/vie 11–14)', 'Dr. Gac (sin rotante) · Dra. Hoyl (con rotante MedFam)'],
   ['🎓 Becados Medicina Interna', 'Dra. Ingrid Danke'],
   ['📅 Calendario semanal', 'Dr. Hugo González'],
   ['🏛️ Jefatura del programa', 'Dra. Marcela Carrasco (?)'],
@@ -1687,7 +1683,6 @@ function orgSCHTML() {
   return `<div class="org">
     <div class="org-lvl top">${box('Dra. Marcela Carrasco', 'Jefa del Programa / Departamento (?)', 'jefe')}</div>
     <div class="org-lvl">${box('Dr. González', 'Jefe UGA San Carlos · calendario semanal')}${box('Dr. Gac', 'Domicilio / UC en Casa')}${box('Dra. Danke', 'Becados Med Int')}</div>
-    <div class="org-lvl">${box('UGA', '1 rotante fijo (Med Int)', 'area')}</div>
   </div>`;
 }
 function equipoSCHTML() {
