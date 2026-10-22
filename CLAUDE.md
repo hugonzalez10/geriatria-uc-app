@@ -8,8 +8,8 @@ continúe el desarrollo. Léelo completo antes de tocar nada. Está en español 
 ## 1. Qué es esto (contexto humano)
 
 - **Dueño**: Dr. Hugo González (internista + geriatra, UC CHRISTUS, Santiago de Chile). Coordinador docente de
-  rotantes de Geriatría UC y, desde 17-08-2026, jefe de la UGA (Unidad Geriátrica de Agudos) del Hospital Clínico
-  UC San Carlos de Apoquindo.
+  rotantes de Geriatría UC y, desde 17-08-2026, jefe de la UGA (Unidad Geriátrica de Agudos) de la Clínica San
+  Carlos de Apoquindo. **Ojo**: UGA = San Carlos; Hospital Clínico UC = Marcoleta = Sala UC. No mezclarlos.
 - **Origen de la idea**: Homero Gac (jefe de Geriatría UC, Hugo le dice "Profe") propuso una app para que becados y
   rotantes sepan cómo funciona la rotación: dónde ir, con quién, qué se espera, plantillas, calculadoras.
 - **Usuarios finales**: becados de Geriatría, rotantes de Medicina Interna / Medicina Familiar / internos, en celular,
@@ -30,7 +30,7 @@ El repo **es** la fuente de verdad: se edita directo aquí. No hay copias maestr
 
 - Hugo pidió explícitamente **dos archivos separados**: "Generame una aparte para san carlos. Manten esta como
   geriatria uc". La general cubre toda la rotación (ambulatorio, sedes, poli, docencia); la de San Carlos es solo
-  lo hospitalario (Sala UC / UGA, turnos, logística del hospital).
+  la UGA de la Clínica San Carlos (turnos, logística). Sala UC (Marcoleta) va solo en la general.
 - Versiones previas: viven en el historial de git (ver commits en §3), no como archivos `.vX.Y.html`. Para
   recuperar una: `git show <commit>:index.html`.
 - San Carlos v0.1 se generó recortando la general v0.2; desde v0.2 se edita a mano. Edita
