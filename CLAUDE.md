@@ -21,30 +21,31 @@ continúe el desarrollo. Léelo completo antes de tocar nada. Está en español 
 
 ## 2. Dos apps, no una
 
-| App | Archivo fuente (maestro) | Archivo publicado | URL pública |
-|---|---|---|---|
-| **General** "Geriatría UC · Guía del rotante" v0.3 | `~/.hermes/data/geriatria_uc_app.html` (162 KB) | `index.html` de este repo | https://hugonzalez10.github.io/geriatria-uc-app/ |
-| **San Carlos** "Geriatría UC · San Carlos de Apoquindo" v0.2 | `~/.hermes/data/san_carlos_app.html` (143 KB) | `san-carlos/index.html` | https://hugonzalez10.github.io/geriatria-uc-app/san-carlos/ |
+| App | Archivo maestro (en este repo) | URL pública |
+|---|---|---|
+| **General** "Geriatría UC · Guía del rotante" v0.3 | `index.html` (162 KB) | https://hugonzalez10.github.io/geriatria-uc-app/ |
+| **San Carlos** "Geriatría UC · San Carlos de Apoquindo" v0.2 | `san-carlos/index.html` (143 KB) | https://hugonzalez10.github.io/geriatria-uc-app/san-carlos/ |
+
+El repo **es** la fuente de verdad: se edita directo aquí. No hay copias maestras fuera del repo.
 
 - Hugo pidió explícitamente **dos archivos separados**: "Generame una aparte para san carlos. Manten esta como
   geriatria uc". La general cubre toda la rotación (ambulatorio, sedes, poli, docencia); la de San Carlos es solo
   lo hospitalario (Sala UC / UGA, turnos, logística del hospital).
-- Backups de versiones previas junto a los maestros: `geriatria_uc_app.v0.1.html`, `.v0.2.html`,
-  `san_carlos_app.v0.1.html`. Antes de una versión nueva, copiar el maestro a `.vX.Y.html`.
-- `~/.hermes/cache/scratch/build_sca.py` generó San Carlos **v0.1** recortando la general v0.2 por números de línea.
-  **Está desactualizado**: v0.2 de San Carlos se editó a mano. Si lo reutilizas, revisa los rangos de líneas; si no,
-  edita `san_carlos_app.html` directamente (recomendado).
+- Versiones previas: viven en el historial de git (ver commits en §3), no como archivos `.vX.Y.html`. Para
+  recuperar una: `git show <commit>:index.html`.
+- San Carlos v0.1 se generó recortando la general v0.2; desde v0.2 se edita a mano. Edita
+  `san-carlos/index.html` directamente.
 
 ## 3. Repo y publicación
 
 - Repo público: `hugonzalez10/geriatria-uc-app` (GitHub Pages, rama `main`, raíz `/`). Clon local de trabajo:
-  `~/.hermes/cache/scratch/geriatria-uc-app` (este directorio). Commits hasta ahora: `a842585` v0.2, `bc46b0d`
-  SC v0.1, `1ce21d6` general v0.3 + SC v0.2.
+  `~/Documents/geriatria-uc-app` (este directorio). Commits de versiones: `a842585` v0.2, `bc46b0d` SC v0.1,
+  `1ce21d6` general v0.3 + SC v0.2.
 - Flujo de actualización:
-  1. Editar el maestro en `~/.hermes/data/…` (o editar aquí y copiar de vuelta; mantener ambos iguales).
-  2. `cp ~/.hermes/data/geriatria_uc_app.html index.html` y/o `cp ~/.hermes/data/san_carlos_app.html san-carlos/index.html`.
-  3. Validar: `node --check` no sirve directo sobre HTML; extraer el `<script>` o abrir en navegador y mirar consola (0 errores exigido).
-  4. `git -c user.name='Hugo González' -c user.email='<correo de Hugo>' commit -am "…"`.
+  1. Editar `index.html` y/o `san-carlos/index.html` directo en este repo.
+  2. Validar: `node --check` no sirve directo sobre HTML; extraer el `<script>` o abrir en navegador y mirar consola (0 errores exigido).
+  3. Correr el grep de teléfonos/correos de §5.2.
+  4. `git commit -am "…"` (el git local ya está configurado como Hugo González).
   5. `git push` (si pide usuario: `gh auth setup-git` una vez; `gh` ya está autenticado como hugonzalez10).
   6. Pages tarda ~2 min: `gh api repos/hugonzalez10/geriatria-uc-app/pages/builds/latest --jq .status` → `built`.
 - Telegram no abre HTML en el celular: a Hugo siempre se le manda la **URL**, no el archivo.
