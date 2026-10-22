@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#003366">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Geriatría UC · Guía del rotante</title>
+<!--
+  ============================================================
+  Geriatría UC · Guía del rotante — Prototipo v0.2
+  ------------------------------------------------------------
+  Archivo único, autocontenido (HTML + CSS + JS vanilla).
+  Funciona abriéndolo directamente (file://) y sin conexión.
+  Los datos del Directorio, enlaces propios, pauta y calendario
+  se guardan en localStorage del navegador del celular. Los
+  borradores de plantillas clínicas se guardan SOLO en
+  sessionStorage (se borran al cerrar la pestaña/navegador).
+
+  PRIVACIDAD: la app no contiene datos de pacientes. Las
+  plantillas piden edad/cama, nunca nombre ni RUT.
+
+  SECCIONES DEL ARCHIVO (buscar por el rótulo):
+    [CSS]   Estilos (variables de color, layout, componentes)
+    [HTML]  Estructura: cabecera, 5 vistas, barra inferior
+    [JS-0]  Utilidades y navegación entre pestañas
+    [JS-1]  Rotación (bienvenida, semana tipo, reglas por rotante, sedes, checklist)
+    [JS-2]  Calculadoras (definiciones de escalas y motor genérico; 25 escalas)
+    [JS-3]  Directorio (editable, localStorage, exportar/importar)
+    [JS-4]  Recursos (enlaces fijos + enlaces propios)
+    [JS-6]  Plantillas (ingreso HGG, entrega de turno, interconsulta, evolución) → texto plano para TrakCare
+    [JS-7]  Más: Checklists, Glosario, Pauta de evaluación, Calendario, Recursos
+    [JS-5]  Arranque
+  ============================================================
+-->
+<style>
+/* ========================= [CSS] ========================= */
+:root{
+  --uc:#003366;          /* azul institucional UC */
+  --uc-2:#0a4f8f;        /* azul secundario */
+  --uc-soft:#e6eef7;     /* fondo suave azul */
+  --bg:#f4f6f9;
+  --card:#ffffff;
+  --text:#1b2430;
+  --muted:#5e6b7a;
+  --line:#dfe5ec;
+  --ok:#1f7a4d;  --ok-bg:#e4f4ea;
+  --warn:#9a6b00; --warn-bg:#fff4d6;
+  --bad:#a62626; --bad-bg:#fde7e7;
+  --radius:14px;
+  --nav-h:64px;
+  --tap:48px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--uc-2)}
+
+/* Cabecera */
+header.top{position:sticky;top:0;z-index:20;background:var(--uc);color:#fff;
+  padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;gap:12px}
+header.top .back{display:none;background:none;border:0;color:#fff;font-size:26px;line-height:1;
+  min-width:var(--tap);min-height:40px;margin-left:-8px;cursor:pointer}
+header.top.has-back .back{display:block}
+header.top h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.2px}
+header.top small{display:block;font-size:12px;opacity:.8;font-weight:400}
+
+/* Contenido */
+main{padding:14px 14px calc(var(--nav-h) + env(safe-area-inset-bottom) + 24px);max-width:720px;margin:0 auto}
+.view{display:none}
+.view.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.card h2{font-size:17px;margin:0 0 8px;color:var(--uc)}
+.card h3{font-size:15px;margin:14px 0 6px;color:var(--uc-2)}
+.card p{margin:6px 0}
+.muted{color:var(--muted);font-size:14px}
+.ph{background:#fff7cc;border-bottom:2px dotted #c9a400;padding:0 3px;border-radius:3px}
+.note{background:var(--uc-soft);border-left:4px solid var(--uc);padding:10px 12px;border-radius:8px;font-size:14px;margin:10px 0}
+.note.warn{background:var(--warn-bg);border-color:var(--warn)}
+
+/* Botones */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);
+  padding:10px 16px;border-radius:12px;border:1px solid var(--uc);background:var(--uc);color:#fff;
+  font-weight:600;cursor:pointer;text-decoration:none;font-size:15px}
+.btn.secondary{background:#fff;color:var(--uc)}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--text);font-weight:500}
+.btn.danger{background:#fff;color:var(--bad);border-color:var(--bad)}
+.btn.block{width:100%}
+.btn.sm{min-height:38px;padding:6px 12px;font-size:14px;border-radius:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row > .btn{flex:1}
+
+/* Lista de ítems (menú de calculadoras / directorio) */
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);padding:14px 16px;min-height:60px;cursor:pointer;text-align:left;width:100%}
+.item .ic{width:40px;height:40px;border-radius:10px;background:var(--uc-soft);color:var(--uc);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.item .t{flex:1}
+.item .t b{display:block;font-size:15px}
+.item .t span{font-size:13px;color:var(--muted)}
+.item .chev{color:var(--muted);font-size:20px}
+
+/* Formularios */
+.field{margin:12px 0}
+.field label{display:block;font-size:14px;font-weight:600;margin-bottom:6px}
+.field input[type=number],.field input[type=text],.field input[type=tel],.field select,.field textarea{
+  width:100%;min-height:var(--tap);padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.field textarea{min-height:90px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg label{flex:1;min-width:46%;display:flex;align-items:center;gap:8px;border:1px solid var(--line);
+  border-radius:10px;padding:10px 12px;min-height:var(--tap);background:#fff;font-weight:500;font-size:14px;cursor:pointer}
+.seg label:has(input:checked){border-color:var(--uc);background:var(--uc-soft)}
+.seg input{width:20px;height:20px;accent-color:var(--uc);flex-shrink:0}
+.opt{display:block}
+.opt label{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:10px;margin-bottom:8px;background:#fff;cursor:pointer;font-size:14px}
+.opt label:has(input:checked){border-color:var(--uc);background:var(--uc-soft)}
+.opt input{width:20px;height:20px;accent-color:var(--uc);margin-top:2px;flex-shrink:0}
+.opt .pts{margin-left:auto;font-weight:700;color:var(--uc);white-space:nowrap}
+.qtitle{font-weight:600;font-size:15px;margin:14px 0 6px}
+.qhelp{font-size:13px;color:var(--muted);margin:-4px 0 8px}
+
+/* Resultado */
+.result{margin-top:14px;padding:14px;border-radius:12px;background:var(--uc-soft);border:1px solid #c7d7ea}
+.result .score{font-size:28px;font-weight:700;color:var(--uc)}
+.result .interp{font-weight:600;margin-top:4px}
+.result.ok{background:var(--ok-bg);border-color:#bfe3cc}.result.ok .score{color:var(--ok)}
+.result.warn{background:var(--warn-bg);border-color:#efd58a}.result.warn .score{color:var(--warn)}
+.result.bad{background:var(--bad-bg);border-color:#f3bcbc}.result.bad .score{color:var(--bad)}
+.ref{font-size:12px;color:var(--muted);margin-top:12px;border-top:1px dashed var(--line);padding-top:8px}
+
+/* Checklist */
+.check label{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;
+  margin-bottom:8px;background:#fff;min-height:var(--tap)}
+.check input[type=checkbox]{width:22px;height:22px;accent-color:var(--uc);flex-shrink:0}
+.check input[type=text]{flex:1;border:0;border-bottom:1px dashed var(--line);padding:4px 2px;background:transparent;min-width:0}
+.check label:has(input:checked) input[type=text]{text-decoration:line-through;color:var(--muted)}
+.check .del{background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer;min-width:36px}
+
+/* Directorio */
+.dir-sec{margin-bottom:16px}
+.dir-sec h2{display:flex;align-items:center;justify-content:space-between;font-size:16px;color:var(--uc);margin:0 0 8px}
+.contact{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;
+  display:flex;gap:10px;align-items:center}
+.contact .info{flex:1;min-width:0}
+.contact .info b{display:block;font-size:15px}
+.contact .info span{display:block;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.contact .acts{display:flex;gap:6px;flex-direction:column}
+.contact a.btn,.contact button.btn{min-height:38px;padding:4px 10px;font-size:13px}
+.empty{font-size:14px;color:var(--muted);font-style:italic;padding:6px 2px}
+
+/* Recursos */
+.link{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:14px 16px;margin-bottom:8px;text-decoration:none;color:var(--text);min-height:60px}
+.link b{display:block;font-size:15px;color:var(--uc)}
+.link span{font-size:13px;color:var(--muted)}
+.link .del{margin-left:auto;background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer}
+
+/* Modal simple */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.modal.open{display:flex}
+.modal .sheet{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+.modal h2{margin:0 0 8px;font-size:17px;color:var(--uc)}
+
+/* Navegación inferior */
+nav.bottom{position:fixed;left:0;right:0;bottom:0;height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);background:#fff;border-top:1px solid var(--line);display:flex;z-index:30}
+nav.bottom button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer}
+nav.bottom button svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.bottom button.active{color:var(--uc)}
+
+footer{font-size:12px;color:var(--muted);text-align:center;padding:10px 0 4px}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 20px);transform:translateX(-50%);background:#1b2430;color:#fff;
+  padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
+.toast.show{opacity:1}
+
+/* v0.2 — Tablas (semana tipo, sedes) */
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:8px -4px}
+table.tbl{border-collapse:collapse;width:100%;font-size:13px;min-width:520px}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:6px 7px;vertical-align:top;text-align:left}
+table.tbl th{background:var(--uc-soft);color:var(--uc);font-weight:600;white-space:nowrap}
+table.tbl td.band{background:#eef1f5;font-weight:700;color:var(--muted);text-align:center;letter-spacing:2px}
+table.tbl .fx{font-weight:600;color:var(--uc)}
+table.tbl.sedes{min-width:0}
+details{margin:8px 0}
+details summary{cursor:pointer;font-weight:600;color:var(--uc-2);padding:6px 0;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:'▸ ';}
+details[open] summary::before{content:'▾ ';}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--uc-soft);color:var(--uc);margin-right:4px}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}
+
+/* Opciones compactas (Likert) */
+.seg.c label{min-width:0;flex:1 1 0;padding:8px 4px;font-size:12px;justify-content:center;text-align:center;gap:4px;line-height:1.2}
+.seg.c input{width:16px;height:16px}
+
+/* Plantillas */
+.tpl h3{display:flex;align-items:center;gap:8px}
+.tpl .field{margin:8px 0}
+.tpl .field label{font-size:13px}
+.tpl .field textarea{min-height:64px}
+.tpl .chk{display:flex;flex-wrap:wrap;gap:6px}
+.tpl .chk label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:13px;background:#fff;cursor:pointer}
+.tpl .chk label:has(input:checked){border-color:var(--uc);background:var(--uc-soft);font-weight:600}
+.tpl .chk input{width:16px;height:16px;accent-color:var(--uc)}
+.sticky-actions{position:sticky;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 6px);background:rgba(244,246,249,.95);padding:8px 0;z-index:5;backdrop-filter:blur(4px)}
+pre.copytxt{white-space:pre-wrap;word-break:break-word;font-size:13px;background:#fafbfc;border:1px solid var(--line);border-radius:10px;padding:10px;max-height:50vh;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+/* Glosario */
+.gl dt{font-weight:700;color:var(--uc);margin-top:10px}
+.gl dd{margin:2px 0 0;font-size:14px}
+.search{width:100%;min-height:var(--tap);padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:8px}
+
+/* Pauta */
+.pauta .crit{display:grid;grid-template-columns:1fr 70px;gap:8px;align-items:start;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;background:#fff}
+.pauta .crit input[type=text]{border:0;border-bottom:1px dashed var(--line);padding:4px 2px;width:100%;background:transparent;font-weight:600}
+.pauta .crit select{min-height:40px;border:1px solid var(--line);border-radius:8px;padding:4px;width:100%}
+.pauta .crit textarea{grid-column:1/3;min-height:40px;border:1px solid var(--line);border-radius:8px;padding:6px;width:100%;font-size:13px}
+.calimg{max-width:100%;border-radius:12px;border:1px solid var(--line);display:block;margin-top:10px}
+</style>
+</head>
+<body>
+
+<!-- ========================= [HTML] ========================= -->
+<header class="top" id="hdr">
+  <button class="back" id="btnBack" aria-label="Volver">‹</button>
+  <div>
+    <h1 id="hdrTitle">Geriatría UC</h1>
+    <small id="hdrSub">Guía del rotante · San Carlos de Apoquindo</small>
+  </div>
+</header>
+
+<main>
+  <!-- Pestaña 1: Rotación -->
+  <section class="view" id="view-rotacion"></section>
+  <!-- Pestaña 2: Plantillas (menú + formulario de cada plantilla) -->
+  <section class="view" id="view-plant"></section>
+  <!-- Pestaña 3: Calculadoras (menú + panel de cada calculadora) -->
+  <section class="view" id="view-calc"></section>
+  <!-- Pestaña 4: Directorio -->
+  <section class="view" id="view-dir"></section>
+  <!-- Pestaña 5: Más (Checklists, Glosario, Pauta, Calendario, Recursos) -->
+  <section class="view" id="view-mas"></section>
+
+  <footer>Prototipo v0.2 · Geriatría UC CHRISTUS · No reemplaza el juicio clínico</footer>
+</main>
+
+<nav class="bottom" id="nav">
+  <button data-tab="rotacion">
+    <svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Rotación
+  </button>
+  <button data-tab="plant">
+    <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg>Plantillas
+  </button>
+  <button data-tab="calc">
+    <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h3M13 12h3M8 16h3M13 16h3"/></svg>Calculadoras
+  </button>
+  <button data-tab="dir">
+    <svg viewBox="0 0 24 24"><path d="M5 4h2l2 5-2 1a11 11 0 0 0 7 7l1-2 5 2v2a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>Directorio
+  </button>
+  <button data-tab="mas">
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Más
+  </button>
+</nav>
+
+<div class="modal" id="modal"><div class="sheet" id="modalBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ========================= [JS-0] Utilidades y navegación ========================= */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : JSON.parse(v); } catch (e) { return def; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { toast('No se pudo guardar (almacenamiento no disponible)'); } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+/* Borradores clínicos: solo sessionStorage (se borran al cerrar). */
+const sess = {
+  get(k, def) { try { const v = sessionStorage.getItem(k); return v === null ? def : JSON.parse(v); } catch (e) { return def; } },
+  set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { sessionStorage.removeItem(k); } catch (e) {} }
+};
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function openModal(html) { $('#modalBody').innerHTML = html; $('#modal').classList.add('open'); }
+function closeModal() { $('#modal').classList.remove('open'); }
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+
+/* Copiar texto plano al portapapeles (con respaldo para file:// y navegadores antiguos). */
+function copyText(txt, label) {
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = txt; ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.focus(); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove(); return ok;
+  };
+  const done = ok => toast(ok ? (label || 'Copiado al portapapeles') : 'No se pudo copiar automáticamente: seleccione el texto de la vista previa');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => done(true), () => done(fallback()));
+  else done(fallback());
+}
+function previewCopy(title, txt) {
+  openModal(`<h2>${esc(title)}</h2><p class="muted">Vista previa del texto plano. Pegar en TrakCare.</p><pre class="copytxt" id="pvTxt">${esc(txt)}</pre>
+    <div class="row" style="margin-top:10px"><button class="btn" id="pvCopy">Copiar</button><button class="btn ghost" id="pvClose">Cerrar</button></div>`);
+  $('#pvCopy').onclick = () => copyText(txt);
+  $('#pvClose').onclick = closeModal;
+}
+
+const TABS = {
+  rotacion: { title: 'Rotación', sub: 'Bienvenida · semana tipo · reglas' },
+  plant:    { title: 'Plantillas', sub: 'Ingreso HGG · entrega · IC · evolución' },
+  calc:     { title: 'Calculadoras', sub: 'Escalas de uso frecuente en Geriatría' },
+  dir:      { title: 'Directorio', sub: 'Contactos del servicio (editable)' },
+  mas:      { title: 'Más', sub: 'Checklists · Glosario · Pauta · Calendario · Recursos' }
+};
+let currentTab = 'rotacion';
+let calcOpen = null; // id de la calculadora abierta, o null (menú)
+let backFn = null;   // acción del botón ‹ de la cabecera (null = sin botón)
+
+function showTab(tab) {
+  currentTab = tab;
+  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + tab));
+  $$('#nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  setHeader(TABS[tab].title, TABS[tab].sub, null);
+  if (tab === 'calc') renderCalcMenu();
+  if (tab === 'plant') renderPlantMenu();
+  if (tab === 'mas') renderMas();
+  window.scrollTo(0, 0);
+}
+function setHeader(title, sub, back) {
+  $('#hdrTitle').textContent = title; $('#hdrSub').textContent = sub;
+  backFn = typeof back === 'function' ? back : null;
+  $('#hdr').classList.toggle('has-back', !!backFn);
+}
+$('#nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) showTab(b.dataset.tab); });
+$('#btnBack').addEventListener('click', () => { if (backFn) backFn(); });
+
+/* ========================= [JS-1] Rotación ========================= */
+/* Texto de bienvenida. Los [corchetes] son PLACEHOLDERS a completar por el equipo docente.
+   NOTA: no se han inventado horarios, lugares ni nombres. */
+const ROTACION_HTML = `
+<div class="card">
+  <h2>Bienvenido/a a Geriatría UC CHRISTUS</h2>
+  <p>Esta guía reúne lo práctico de la rotación en el <b>Hospital Clínico San Carlos de Apoquindo</b>: a quién contactar, qué escalas usar y dónde encontrar las guías de referencia.</p>
+  <div class="note">Los textos entre <span class="ph">[corchetes]</span> son espacios a completar por el equipo docente antes de distribuir la app.</div>
+</div>
+
+<div class="card">
+  <h2>Organización de la rotación</h2>
+  <h3>Equipo docente</h3>
+  <p>Jefe de Servicio: <span class="ph">[nombre]</span> · Jefa de programa: Dra. Trinidad Hoyl · Coordinador de rotantes: Dr. Hugo González · Coordinadora Medicina Interna: Dra. Ingrid Danke · Coordinadora MedFam: Dra. Hoyl · Tutor de internos: Dr. Juan Carlos Rodríguez · Coordinación administrativa: Evelyn Anabalón.</p>
+  <p class="muted">Teléfonos y correos: <span class="ph">[completar en Directorio]</span>.</p>
+  <h3>Puestos fijos de la semana</h3>
+  <p><b>Sala UC</b> (hospitalizados; 1 solo rotante por día) y <b>UGA San Carlos 08:30</b> (Unidad Geriátrica de Agudos). Son puesto fijo de la semana completa: no se cambia al rotante a mitad de semana.</p>
+  <p>Entrega de turno Sala UC: <span class="ph">[hora y lugar]</span>. Visita: <span class="ph">[hora]</span>.</p>
+  <h3>Unidades y actividades por las que se rota</h3>
+  <p>Sala UC · UGA San Carlos · Policlínicos docentes en centros médicos UC (ver sedes) · Poli becados San Joaquín (mar/mié 14:00) · Domicilio Dr. Gac (lun/mar PM; lo cubre quien está en UGA) · Reunión académica y reunión del 5° piso.</p>
+</div>
+
+<div class="card">
+  <h2>Semana tipo</h2>
+  <p class="muted">Fijos de todas las semanas en <span class="fx" style="color:var(--uc);font-weight:600">azul</span>. La grilla real con docente y box se publica cada semana (Más → Calendario). Contactar al docente el día anterior.</p>
+  <div class="tblwrap"><table class="tbl">
+    <tr><th></th><th>Lunes</th><th>Martes</th><th>Miércoles</th><th>Jueves</th><th>Viernes</th></tr>
+    <tr><td class="band" colspan="6">M A Ñ A N A</td></tr>
+    <tr><th>AM</th>
+      <td>Sala UC<br>UGA San Carlos 08:30<br>Poli docente</td>
+      <td><span class="fx">08:00 Reunión académica (Zoom, todos)</span><br>Sala UC<br>UGA San Carlos 08:30<br>Poli docente</td>
+      <td>Sala UC<br>UGA San Carlos 08:30<br>Poli docente</td>
+      <td>Sala UC<br>UGA San Carlos 08:30<br>Poli docente (Santa Lucía en lo posible)</td>
+      <td>Sala UC<br>UGA San Carlos 08:30<br>Poli docente</td></tr>
+    <tr><td class="band" colspan="6">T A R D E</td></tr>
+    <tr><th>PM</th>
+      <td>Sala UC<br>Domicilio Dr. Gac<br>Poli docente</td>
+      <td><span class="fx">Poli becados SJ 14:00</span><br>Domicilio Dr. Gac<br>Poli docente</td>
+      <td><span class="fx">Tarde académica</span> (Medint libre)<br><span class="fx">Poli becados SJ 14:00</span><br>Poli docente</td>
+      <td><span class="fx">14:00 Reunión 5° piso Edificio Académico (5A), todos</span></td>
+      <td><span class="fx">Docencia Dr. González — Escuela Militar (PM)</span></td></tr>
+  </table></div>
+  <details>
+    <summary>Bloques docentes habituales (referencia, pueden cambiar)</summary>
+    <p class="muted">Grilla base del coordinador. Solo horarios documentados; sedes y boxes se confirman en la grilla semanal. Consulta de Dr. Gac y Dr. González: sin rotante (sí el domicilio Gac y la docencia del viernes).</p>
+    <div class="tblwrap"><table class="tbl">
+      <tr><th></th><th>Lunes</th><th>Martes</th><th>Miércoles</th><th>Jueves</th><th>Viernes</th></tr>
+      <tr><th>AM</th>
+        <td>Carrasco — Vitacura 11:00<br>Born — Sta Lucía 08:50<br>Hoyl — San Carlos 11:00<br>Meza — Sta Lucía 08:00<br>C. Silva — Irarrázaval 08:30<br>Browne — Vitacura 11:00</td>
+        <td>Carrasco — San Joaquín 10:00<br>Born — El Alba 08:50<br>MJ Silva — Sta Lucía 08:30<br>Rodríguez — Esc. Militar 08:30<br>C. Silva — Irarrázaval 09:00</td>
+        <td>Browne — Vitacura 08:30<br>Hoyl — Sta Lucía 09:00<br>Bórquez — Sta Lucía 11:00</td>
+        <td>Browne — Sta Lucía 08:30<br>Hoyl — Sta Lucía 11:00<br>MJ Silva — Bilbao 09:00<br>Danke — Sta Lucía<br>Gac — San Carlos 11:00 (sin rotante)</td>
+        <td>Hoyl — San Carlos 11:00<br>Cáceres — Sta Lucía 08:30<br>Born — Sta Lucía 08:30</td></tr>
+      <tr><th>PM</th>
+        <td>Rodríguez — Alcántara 14:00<br>Carrasco — Vitacura 14:30</td>
+        <td>Rodríguez — Esc. Militar 14:00<br>MJ Silva — Sta Lucía 14:00</td>
+        <td>Hoyl — Sta Lucía 14:00<br>Bórquez — Sta Lucía 14:30</td>
+        <td>—</td>
+        <td>González — Esc. Militar (docencia)</td></tr>
+    </table></div>
+  </details>
+</div>
+
+<div class="card">
+  <h2>Reglas por tipo de rotante</h2>
+  <p><span class="tag">Medint</span> <b>Medicina Interna</b> (≈4 semanas). Una semana Sala UC / una semana UGA (puesto fijo) y semanas ambulatorias con docentes. Reparto lo hace la Dra. Danke. Post-turno: día siguiente libre. Miércoles PM: tarde académica. Día de policlínico propio (San Joaquín): el poli es en la TARDE; esa mañana va a Sala UC y ese día no va al poli de becados.</p>
+  <p><span class="tag">MedFam</span> <b>Medicina Familiar</b> (1–4 semanas). Solo ambulatorio, <b>miércoles a viernes</b> (lunes y martes no están con el equipo). Prioridad con Dra. Hoyl y Dr. Rodríguez. Quien está el viernes AM con Cáceres/Hoyl sigue la tarde con el Dr. González en Escuela Militar.</p>
+  <p><span class="tag">Interno</span> <b>Internos</b> (incl. electivos y extranjeros; 3–4 semanas). Sin restricción horaria; ambulatorio. El electivo se presenta el primer día con la Dra. Born. Tutor de internos: Dr. Juan Carlos Rodríguez.</p>
+  <p><span class="tag">GerUC</span> <b>Becados de Geriatría UC</b>. Se coordinan por correo; solo bloques ambulatorios (nunca Sala UC ni UGA); algunos no entran en la grilla semanal.</p>
+  <p><span class="tag">PsiEnlace</span> <b>Fellows de Psiquiatría de enlace</b>. Clínicas ambulatorias con cupo. Miércoles AM: consulta de enlace (no van a poli). Viernes PM: tarde de investigación.</p>
+  <p><span class="tag">Fellow</span> <b>Fellows de cognición / Neurocog</b>. Agenda propia; quedan fuera de la grilla semanal.</p>
+  <h3>Reglas generales</h3>
+  <p>• Máximo 1 rotante por policlínico (excepto Poli becados SJ, que admite varios). • Un rotante puede quedarse todo el día con el mismo docente si tiene AM y PM. • Evitar traslados grandes entre mañana y tarde. • Jueves AM: Santa Lucía en lo posible. • Avisar al coordinador cambios de turnos o policlínicos apenas se sepan.</p>
+  <div class="note warn"><b>Trabajo final (VGI):</b> cada rotante entrega una Valoración Geriátrica Integral en su última semana, <b>a más tardar el miércoles de la última semana</b>. Formato: ver Plantillas → Ingreso / Evaluación geriátrica (HGG).</div>
+</div>
+
+<div class="card">
+  <h2>Sedes UC CHRISTUS</h2>
+  <p class="muted">Direcciones <span class="ph">[completar]</span> a confirmar por el equipo docente.</p>
+  <div class="tblwrap"><table class="tbl sedes">
+    <tr><th>Sede</th><th>Comuna</th><th>Dirección</th></tr>
+    <tr><td>Hospital Clínico San Carlos de Apoquindo (Sala UC, UGA)</td><td>Las Condes</td><td>Camino El Alba 12351</td></tr>
+    <tr><td>Hospital Clínico Marcoleta</td><td>Santiago</td><td>Marcoleta 367</td></tr>
+    <tr><td>Centro Médico Santa Lucía</td><td>Santiago</td><td>Capitán Orellana 2467</td></tr>
+    <tr><td>Centro Médico Vitacura</td><td>Vitacura</td><td>Av. Vitacura 5670</td></tr>
+    <tr><td>Centro Médico El Alba</td><td>Las Condes</td><td>Camino El Alba 9500, piso 4, torre A</td></tr>
+    <tr><td>Centro Médico Escuela Militar</td><td>Las Condes</td><td>Av. Américo Vespucio 100</td></tr>
+    <tr><td>Centro Médico Irarrázaval</td><td>Ñuñoa</td><td>Irarrázaval 4949</td></tr>
+    <tr><td>Centro Médico Bilbao</td><td>Las Condes</td><td>Francisco Bilbao 4144</td></tr>
+    <tr><td>Centro Médico Alcántara</td><td>Las Condes</td><td>Alcántara 3990</td></tr>
+    <tr><td>Centro Médico San Joaquín (Poli becados)</td><td>Macul</td><td>Av. Vicuña Mackenna 4686</td></tr>
+    <tr><td>Edificio Académico, 5° piso (5A) — reunión jueves 14:00</td><td>Santiago</td><td>Diagonal Paraguay <span class="ph">[n°]</span></td></tr>
+  </table></div>
+</div>
+
+<div class="card">
+  <h2>Expectativas</h2>
+  <p>Del rotante se espera <span class="ph">[número]</span> pacientes a cargo, evolución diaria completa antes de la visita, valoración geriátrica integral (VGI) de ingreso con escalas, conciliación de fármacos y plan de alta temprano con familia y equipo.</p>
+  <p>Presentación de casos: <span class="ph">[formato y frecuencia]</span>.</p>
+  <p>Seminarios a cargo del rotante: <span class="ph">[temas / calendario]</span>.</p>
+</div>
+
+<div class="card">
+  <h2>Evaluación</h2>
+  <p>Trabajo final: VGI escrita, plazo miércoles de la última semana (ver arriba).</p>
+  <p>Pauta de evaluación: en construcción (Más → Pauta de evaluación). Porcentajes: <span class="ph">[pauta / porcentaje]</span>.</p>
+  <p>Evaluación formativa de mitad de rotación: <span class="ph">[sí/no, con quién]</span>.</p>
+  <p>Requisitos de asistencia: <span class="ph">[detallar]</span>.</p>
+  <p>Retroalimentación final: <span class="ph">[fecha / responsable]</span>.</p>
+</div>
+
+<div class="card">
+  <h2>Checklist del primer día <span class="muted" style="font-weight:400;font-size:13px">(editable, se guarda en este celular)</span></h2>
+  <div class="check" id="checklist"></div>
+  <div class="row" style="margin-top:8px">
+    <button class="btn secondary sm" id="chkAdd">+ Agregar ítem</button>
+    <button class="btn ghost sm" id="chkReset">Restablecer</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Contacto para dudas</h2>
+  <p><span class="ph">[nombre, rol, teléfono/anexo o correo]</span></p>
+  <p class="muted">Sugerencia: ver también la pestaña Directorio.</p>
+</div>`;
+
+const CHECK_DEFAULT = [
+  'Credencial / identificación institucional',
+  'Acceso a TrakCare (usuario y clave)',
+  'Acceso a red Wi-Fi institucional',
+  'Delantal / uniforme y casillero',
+  'Presentación con jefe de servicio y residentes',
+  'Conocer ubicación de la sala, estación de enfermería y residencia',
+  'Agregar teléfonos del Directorio al celular',
+  'Revisar horario de visita y entrega de turno',
+  'Leer protocolo de delirium y prevención de caídas de la unidad',
+  'Completar documentos de la rotación (firma de asistencia, confidencialidad)'
+].map(t => ({ t, d: false }));
+
+function renderRotacion() {
+  const v = $('#view-rotacion');
+  v.innerHTML = ROTACION_HTML;
+  renderChecklist();
+  $('#chkAdd').onclick = () => { const l = store.get('chk', CHECK_DEFAULT); l.push({ t: '', d: false }); store.set('chk', l); renderChecklist(true); };
+  $('#chkReset').onclick = () => { if (confirm('¿Restablecer el checklist original?')) { store.set('chk', CHECK_DEFAULT); renderChecklist(); } };
+}
+function renderChecklist(focusLast) {
+  const list = store.get('chk', CHECK_DEFAULT);
+  const box = $('#checklist');
+  box.innerHTML = list.map((it, i) => `
+    <label>
+      <input type="checkbox" data-i="${i}" ${it.d ? 'checked' : ''}>
+      <input type="text" data-i="${i}" value="${esc(it.t)}" placeholder="Escribir ítem…">
+      <button class="del" data-i="${i}" aria-label="Eliminar">×</button>
+    </label>`).join('');
+  box.onchange = e => {
+    const i = +e.target.dataset.i; const l = store.get('chk', CHECK_DEFAULT);
+    if (e.target.type === 'checkbox') l[i].d = e.target.checked; else l[i].t = e.target.value;
+    store.set('chk', l);
+  };
+  box.onclick = e => {
+    if (e.target.classList.contains('del')) {
+      e.preventDefault(); const l = store.get('chk', CHECK_DEFAULT); l.splice(+e.target.dataset.i, 1); store.set('chk', l); renderChecklist();
+    }
+  };
+  if (focusLast) { const ins = $$('input[type=text]', box); if (ins.length) ins[ins.length - 1].focus(); }
+}
+
+/* ========================= [JS-2] Calculadoras ========================= */
+/* Motor genérico:
+   - tipo 'items'  : lista de ítems con opciones (radio) o casillas (checkbox) con puntaje → suma → interpret()
+   - tipo 'custom' : render() y calc() propios (CFS, Mini-Cog, Cockcroft-Gault, TUG, IMC, FRAX)
+   Cada calculadora: { id, abbr, name, desc, ref, ... }                                          */
+
+const CALCS = [];
+
+/* ---- Clinical Frailty Scale (Rockwood) ---- */
+CALCS.push({
+  id: 'cfs', abbr: 'CFS', name: 'Clinical Frailty Scale', desc: 'Fragilidad clínica 1–9 (Rockwood)',
+  type: 'custom',
+  levels: [
+    [1, 'Muy en forma', 'Robusto, activo, enérgico y motivado. Hace ejercicio regularmente. Entre los más en forma para su edad.'],
+    [2, 'En forma', 'Sin enfermedad activa, pero menos en forma que el nivel 1. Activo ocasionalmente o por temporadas.'],
+    [3, 'Se maneja bien', 'Problemas médicos bien controlados. No realiza actividad física regular más allá de caminar.'],
+    [4, 'Vive con fragilidad muy leve', 'No depende de otros, pero los síntomas limitan actividades. Queja típica: "más lento" o cansado durante el día.'],
+    [5, 'Vive con fragilidad leve', 'Enlentecimiento evidente; necesita ayuda en AIVD de mayor exigencia (finanzas, transporte, trabajo doméstico pesado, medicamentos).'],
+    [6, 'Vive con fragilidad moderada', 'Necesita ayuda en todas las actividades fuera del hogar y en el cuidado de la casa. Dificultad con escaleras; ayuda para bañarse, mínima para vestirse.'],
+    [7, 'Vive con fragilidad severa', 'Completamente dependiente para el cuidado personal, por cualquier causa (física o cognitiva). Estable, sin alto riesgo de morir en 6 meses.'],
+    [8, 'Vive con fragilidad muy severa', 'Completamente dependiente, acercándose al final de la vida. No se recuperaría de una enfermedad menor.'],
+    [9, 'Enfermedad terminal', 'Expectativa de vida < 6 meses, sin otra evidencia de fragilidad severa.']
+  ],
+  render() {
+    return `<p class="muted">Evaluar la situación basal (2 semanas antes de la enfermedad aguda). En demencia, el grado de fragilidad suele corresponder al grado de demencia.</p>
+      <div class="opt">${this.levels.map(l => `<label><input type="radio" name="cfs" value="${l[0]}"><span><b>${l[0]} · ${l[1]}</b><br><span class="muted">${l[2]}</span></span></label>`).join('')}</div>`;
+  },
+  calc(root) {
+    const v = $('input[name=cfs]:checked', root); if (!v) return null;
+    const n = +v.value; const lv = this.levels[n - 1];
+    const cls = n <= 3 ? 'ok' : n <= 5 ? 'warn' : 'bad';
+    return { score: `CFS ${n}`, interp: lv[1], detail: n <= 3 ? 'No frágil.' : n === 4 ? 'Pre-frágil / vulnerable: candidato a intervención preventiva.' : 'Frágil: VGI completa, revisar objetivos de cuidado y planificación anticipada.', cls };
+  },
+  ref: 'Rockwood K, et al. CMAJ 2005;173:489-95. Versión 2.0 (2020).'
+});
+
+/* ---- Índice de Barthel ---- */
+CALCS.push({
+  id: 'barthel', abbr: 'BI', name: 'Índice de Barthel', desc: 'ABVD, 10 ítems (0–100)',
+  type: 'items', mode: 'radio',
+  items: [
+    ['Alimentación', [[10, 'Independiente'], [5, 'Necesita ayuda (cortar, untar)'], [0, 'Dependiente']]],
+    ['Baño', [[5, 'Independiente'], [0, 'Dependiente']]],
+    ['Aseo personal', [[5, 'Independiente (cara, dientes, afeitado, peinado)'], [0, 'Dependiente']]],
+    ['Vestirse', [[10, 'Independiente'], [5, 'Necesita ayuda, hace la mitad solo'], [0, 'Dependiente']]],
+    ['Deposición', [[10, 'Continente'], [5, 'Accidente ocasional (≤1/semana)'], [0, 'Incontinente']]],
+    ['Micción', [[10, 'Continente'], [5, 'Accidente ocasional (≤1/día)'], [0, 'Incontinente o sonda sin manejo propio']]],
+    ['Uso del retrete', [[10, 'Independiente'], [5, 'Necesita algo de ayuda'], [0, 'Dependiente']]],
+    ['Traslado sillón–cama', [[15, 'Independiente'], [10, 'Mínima ayuda o supervisión'], [5, 'Gran ayuda, puede sentarse'], [0, 'Dependiente, no se mantiene sentado']]],
+    ['Deambulación', [[15, 'Independiente ≥ 50 m (puede usar bastón)'], [10, 'Necesita ayuda de una persona ≥ 50 m'], [5, 'Independiente en silla de ruedas ≥ 50 m'], [0, 'Inmóvil']]],
+    ['Escaleras', [[10, 'Independiente'], [5, 'Necesita ayuda o supervisión'], [0, 'Incapaz']]]
+  ],
+  interpret(s) {
+    if (s === 100) return { interp: 'Independiente', cls: 'ok' };
+    if (s >= 60) return { interp: 'Dependencia leve', cls: 'ok' };
+    if (s >= 40) return { interp: 'Dependencia moderada', cls: 'warn' };
+    if (s >= 20) return { interp: 'Dependencia severa', cls: 'bad' };
+    return { interp: 'Dependencia total', cls: 'bad' };
+  },
+  ref: 'Mahoney FI, Barthel DW. Md State Med J 1965;14:61-5. Puntos de corte según Shah/Granger (uso habitual en Chile).'
+});
+
+/* ---- Índice de Katz ---- */
+CALCS.push({
+  id: 'katz', abbr: 'Katz', name: 'Índice de Katz', desc: 'ABVD, 6 funciones (0–6)',
+  type: 'items', mode: 'check',
+  help: 'Marcar las funciones en que el paciente es INDEPENDIENTE (sin supervisión, dirección ni ayuda personal).',
+  items: [
+    ['Bañarse (solo o ayuda únicamente en una parte del cuerpo)', 1],
+    ['Vestirse (saca ropa del clóset y se viste; puede necesitar ayuda con zapatos)', 1],
+    ['Uso del WC (va, se sienta/levanta, se arregla la ropa, se asea)', 1],
+    ['Movilidad / transferencias (entra y sale de la cama o silla sin ayuda)', 1],
+    ['Continencia (control completo de micción y defecación)', 1],
+    ['Alimentación (lleva la comida del plato a la boca sin ayuda)', 1]
+  ],
+  interpret(s) {
+    if (s === 6) return { interp: 'Independiente (Katz A)', cls: 'ok' };
+    if (s >= 4) return { interp: 'Dependencia moderada', cls: 'warn' };
+    if (s >= 3) return { interp: 'Dependencia moderada-severa', cls: 'warn' };
+    return { interp: 'Dependencia severa', cls: 'bad' };
+  },
+  ref: 'Katz S, et al. JAMA 1963;185:914-9. Shelkey M, Wallace M. Try This (Hartford Institute) 2012.'
+});
+
+/* ---- CAM (Confusion Assessment Method) ---- */
+CALCS.push({
+  id: 'cam', abbr: 'CAM', name: 'CAM · Delirium', desc: 'Confusion Assessment Method, 4 criterios',
+  type: 'custom',
+  render() {
+    const q = [
+      ['1. Inicio agudo y curso fluctuante', '¿Hay evidencia de un cambio agudo del estado mental respecto al basal? ¿Fluctúa durante el día?'],
+      ['2. Inatención', '¿Dificultad para mantener la atención (se distrae, pierde el hilo)? Ej.: meses del año al revés, dígitos.'],
+      ['3. Pensamiento desorganizado', '¿Conversación incoherente, divagante, ilógica o con cambios impredecibles de tema?'],
+      ['4. Alteración del nivel de conciencia', 'Cualquier nivel distinto de "alerta": vigilante/hiperalerta, letárgico, estuporoso o comatoso.']
+    ];
+    return `<p class="muted">Aplicar tras una entrevista breve (idealmente con prueba de atención y datos de cuidador/enfermería).</p>` +
+      q.map((x, i) => `<div class="qtitle">${x[0]}</div><div class="qhelp">${x[1]}</div>
+        <div class="seg"><label><input type="radio" name="cam${i}" value="1">Presente</label><label><input type="radio" name="cam${i}" value="0">Ausente</label></div>`).join('');
+  },
+  calc(root) {
+    const r = [0, 1, 2, 3].map(i => $(`input[name=cam${i}]:checked`, root));
+    if (r.some(x => !x)) return null;
+    const v = r.map(x => x.value === '1');
+    const pos = v[0] && v[1] && (v[2] || v[3]);
+    return { score: pos ? 'CAM POSITIVO' : 'CAM negativo', cls: pos ? 'bad' : 'ok',
+      interp: pos ? 'Cumple criterios de delirium (1 + 2 + [3 ó 4])' : 'No cumple criterios de delirium en esta evaluación',
+      detail: pos ? 'Buscar y tratar causas (infección, fármacos, dolor, retención urinaria, fecaloma, hipoxia, metabólico). Medidas no farmacológicas. Reevaluar.' : 'Si persiste la sospecha clínica, repetir la evaluación: el delirium fluctúa.' };
+  },
+  ref: 'Inouye SK, et al. Ann Intern Med 1990;113:941-8.'
+});
+
+/* ---- Mini-Cog ---- */
+CALCS.push({
+  id: 'minicog', abbr: 'MC', name: 'Mini-Cog', desc: 'Tamizaje cognitivo: 3 palabras + reloj',
+  type: 'custom',
+  render() {
+    return `<div class="qtitle">Paso 1 · Registro</div>
+      <div class="qhelp">Decir 3 palabras no relacionadas (ej.: "plátano – amanecer – silla") y pedir que las repita.</div>
+      <div class="qtitle">Paso 2 · Test del reloj</div>
+      <div class="qhelp">"Dibuje un reloj con todos los números y ponga las manecillas a las 11:10". Normal = todos los números en posición y orden correctos, manecillas apuntando a 11 y 2.</div>
+      <div class="seg"><label><input type="radio" name="clock" value="2">Reloj normal (2 pts)</label><label><input type="radio" name="clock" value="0">Reloj anormal (0 pts)</label></div>
+      <div class="qtitle">Paso 3 · Recuerdo diferido</div>
+      <div class="qhelp">Palabras recordadas sin ayuda:</div>
+      <div class="seg">${[0, 1, 2, 3].map(n => `<label><input type="radio" name="words" value="${n}">${n} palabra${n === 1 ? '' : 's'}</label>`).join('')}</div>`;
+  },
+  calc(root) {
+    const c = $('input[name=clock]:checked', root), w = $('input[name=words]:checked', root);
+    if (!c || !w) return null;
+    const s = +c.value + +w.value;
+    const pos = s < 3;
+    return { score: `${s} / 5`, cls: pos ? 'bad' : 'ok',
+      interp: pos ? 'Tamizaje POSITIVO para deterioro cognitivo' : 'Tamizaje negativo',
+      detail: pos ? 'Completar evaluación cognitiva (MoCA/MMSE, funcionalidad, descartar delirium y depresión).' : 'Un resultado negativo no descarta deterioro leve; correlacionar con la clínica.' };
+  },
+  ref: 'Borson S, et al. Int J Geriatr Psychiatry 2000;15:1021-7. Punto de corte < 3.'
+});
+
+/* ---- Índice de comorbilidad de Charlson (clásico) ---- */
+CALCS.push({
+  id: 'charlson', abbr: 'CCI', name: 'Índice de Charlson', desc: 'Comorbilidad (versión clásica 1987) ± ajuste por edad',
+  type: 'items', mode: 'check',
+  items: [
+    ['Infarto agudo al miocardio', 1], ['Insuficiencia cardíaca congestiva', 1], ['Enfermedad vascular periférica', 1],
+    ['Enfermedad cerebrovascular (ACV/AIT)', 1], ['Demencia', 1], ['Enfermedad pulmonar crónica', 1],
+    ['Enfermedad del tejido conectivo', 1], ['Úlcera péptica', 1], ['Hepatopatía leve', 1], ['Diabetes sin daño de órgano blanco', 1],
+    ['Hemiplejia', 2], ['Enfermedad renal moderada o severa', 2], ['Diabetes con daño de órgano blanco', 2],
+    ['Tumor sólido sin metástasis', 2], ['Leucemia', 2], ['Linfoma', 2],
+    ['Hepatopatía moderada o severa', 3],
+    ['Tumor sólido metastásico', 6], ['SIDA', 6]
+  ],
+  extra: `<div class="field"><label>Edad (opcional, para índice ajustado)</label><input type="number" name="age" inputmode="numeric" placeholder="años"></div>`,
+  interpret(s, root) {
+    const age = +($('input[name=age]', root)?.value || 0);
+    let agePts = 0;
+    if (age >= 50) agePts = Math.min(4, Math.floor((age - 40) / 10));
+    const total = s + agePts;
+    const survN = Math.round(100 * Math.pow(0.983, Math.exp(total * 0.9)));
+    const surv = survN < 1 ? '< 1' : String(survN);
+    const base = s === 0 ? 'Sin comorbilidad' : s <= 2 ? 'Comorbilidad baja' : s <= 4 ? 'Comorbilidad moderada' : 'Comorbilidad alta';
+    return { interp: base, cls: s <= 2 ? 'ok' : s <= 4 ? 'warn' : 'bad',
+      scoreLabel: agePts ? `${s} (ajustado por edad: ${total})` : String(s),
+      detail: agePts ? `Supervivencia estimada a 10 años ≈ ${surv}% (índice ajustado por edad; estimación orientativa).` : 'Ingrese edad para calcular el índice ajustado y la supervivencia estimada a 10 años.' };
+  },
+  ref: 'Charlson ME, et al. J Chronic Dis 1987;40:373-83. Ajuste por edad: Charlson 1994.'
+});
+
+/* ---- Cockcroft-Gault ---- */
+CALCS.push({
+  id: 'cg', abbr: 'CrCl', name: 'Cockcroft-Gault', desc: 'Aclaramiento de creatinina estimado',
+  type: 'custom',
+  render() {
+    return `<div class="field"><label>Edad (años)</label><input type="number" name="age" inputmode="numeric"></div>
+      <div class="field"><label>Peso (kg)</label><input type="number" name="wt" inputmode="decimal" step="0.1"></div>
+      <div class="field"><label>Creatinina plasmática (mg/dL)</label><input type="number" name="cr" inputmode="decimal" step="0.01"></div>
+      <div class="field"><label>Sexo</label><div class="seg"><label><input type="radio" name="sex" value="m">Hombre</label><label><input type="radio" name="sex" value="f">Mujer</label></div></div>
+      <div class="field"><label>Talla (cm, opcional: muestra peso ideal/ajustado)</label><input type="number" name="ht" inputmode="numeric"></div>`;
+  },
+  calc(root) {
+    const age = +$('[name=age]', root).value, wt = +$('[name=wt]', root).value, cr = +$('[name=cr]', root).value;
+    const sx = $('input[name=sex]:checked', root), ht = +$('[name=ht]', root).value;
+    if (!age || !wt || !cr || !sx) return null;
+    const f = sx.value === 'f' ? 0.85 : 1;
+    const crcl = (140 - age) * wt / (72 * cr) * f;
+    let extra = '';
+    if (ht) {
+      const ibw = (sx.value === 'f' ? 45.5 : 50) + 0.9 * (ht - 152.4);
+      const bmi = wt / Math.pow(ht / 100, 2);
+      if (bmi >= 30 && ibw > 0) {
+        const abw = ibw + 0.4 * (wt - ibw);
+        const crclA = (140 - age) * abw / (72 * cr) * f;
+        extra = `IMC ${bmi.toFixed(1)}: en obesidad se sugiere peso ajustado (${abw.toFixed(0)} kg) → CrCl ≈ ${crclA.toFixed(0)} mL/min.`;
+      } else if (bmi < 18.5) {
+        extra = `IMC ${bmi.toFixed(1)}: en bajo peso usar peso real (ya aplicado).`;
+      }
+    }
+    const cls = crcl >= 60 ? 'ok' : crcl >= 30 ? 'warn' : 'bad';
+    const st = crcl >= 90 ? 'Función renal normal' : crcl >= 60 ? 'Reducción leve' : crcl >= 45 ? 'Reducción leve-moderada' : crcl >= 30 ? 'Reducción moderada-severa' : crcl >= 15 ? 'Reducción severa' : 'Falla renal';
+    return { score: `${crcl.toFixed(0)} mL/min`, interp: st, cls,
+      detail: 'Usar para ajuste de dosis (p. ej. anticoagulantes orales directos, antibióticos). En adultos mayores con sarcopenia la creatinina sobreestima la función renal. ' + extra };
+  },
+  ref: 'Cockcroft DW, Gault MH. Nephron 1976;16:31-41.'
+});
+
+/* ---- CHA2DS2-VASc + HAS-BLED ---- */
+CALCS.push({
+  id: 'fa', abbr: 'FA', name: 'CHA₂DS₂-VASc + HAS-BLED', desc: 'Riesgo embólico y de sangrado en FA',
+  type: 'custom',
+  chads: [
+    ['Insuficiencia cardíaca / disfunción VI', 1], ['Hipertensión arterial', 1], ['Edad ≥ 75 años', 2], ['Diabetes mellitus', 1],
+    ['ACV / AIT / tromboembolismo previo', 2], ['Enfermedad vascular (IAM previo, EAP, placa aórtica)', 1], ['Edad 65–74 años', 1], ['Sexo femenino', 1]
+  ],
+  hasbled: [
+    ['Hipertensión no controlada (PAS > 160 mmHg)', 1], ['Función renal alterada (diálisis, trasplante, Cr > 2,26 mg/dL)', 1],
+    ['Función hepática alterada (cirrosis, bilirrubina > 2× o transaminasas > 3×)', 1], ['ACV previo', 1],
+    ['Historia o predisposición a sangrado (anemia)', 1], ['INR lábil (TRT < 60%)', 1], ['Edad > 65 años', 1],
+    ['Fármacos (antiplaquetarios, AINE)', 1], ['Alcohol ≥ 8 tragos/semana', 1]
+  ],
+  render() {
+    const mk = (arr, n) => `<div class="opt">${arr.map((x, i) => `<label><input type="checkbox" name="${n}" value="${x[1]}" data-i="${i}"><span>${x[0]}</span><span class="pts">+${x[1]}</span></label>`).join('')}</div>`;
+    return `<div class="qtitle">CHA₂DS₂-VASc (riesgo embólico)</div>${mk(this.chads, 'ch')}
+      <div class="qtitle" style="margin-top:20px">HAS-BLED (riesgo de sangrado)</div>${mk(this.hasbled, 'hb')}`;
+  },
+  calc(root) {
+    const sum = n => $$(`input[name=${n}]:checked`, root).reduce((a, b) => a + +b.value, 0);
+    const c = sum('ch'), h = sum('hb');
+    const female = $$('input[name=ch]:checked', root).some(x => x.dataset.i === '7');
+    const cAdj = female ? c - 1 : c; // el sexo femenino es modificador, no indica por sí solo
+    let cTxt, cCls;
+    if (cAdj === 0) { cTxt = 'Riesgo bajo: no se recomienda anticoagulación'; cCls = 'ok'; }
+    else if (cAdj === 1) { cTxt = 'Riesgo intermedio: considerar anticoagulación oral'; cCls = 'warn'; }
+    else { cTxt = 'Riesgo alto: anticoagulación oral recomendada (ACOD de preferencia)'; cCls = 'bad'; }
+    const hTxt = h >= 3 ? 'HAS-BLED ≥ 3: riesgo de sangrado alto → corregir factores modificables y controlar más seguido; NO es contraindicación por sí mismo.' : 'HAS-BLED bajo-moderado.';
+    return { score: `CHA₂DS₂-VASc ${c} · HAS-BLED ${h}`, interp: cTxt, cls: cCls,
+      detail: hTxt + (female ? ' (El sexo femenino se contabiliza como modificador de riesgo: la indicación se basa en los otros factores.)' : '') + ' En el adulto mayor, caídas y fragilidad no contraindican por sí solas la anticoagulación.' };
+  },
+  ref: 'Lip GY, et al. Chest 2010;137:263-72. Pisters R, et al. Chest 2010;138:1093-100. Guía ESC FA 2024.'
+});
+
+/* ---- Caprini (riesgo TEV quirúrgico) ---- */
+CALCS.push({
+  id: 'caprini', abbr: 'TEV', name: 'Caprini · Riesgo TEV', desc: 'Tromboembolismo venoso en paciente quirúrgico (fractura de cadera)',
+  type: 'items', mode: 'check',
+  help: 'Marcar todo lo que aplique. Modelo de Caprini 2005.',
+  pre: `<div class="note warn"><b>Fractura de cadera:</b> la profilaxis farmacológica está indicada (HBPM / fondaparinux / anticoagulante oral según guía); AAS solo en bajo riesgo según ASH/AAOS; la decisión es del tratante. Esta calculadora ayuda a estratificar, no a indicar.</div>`,
+  items: [
+    ['Edad 41–60 años', 1], ['Cirugía menor planificada', 1], ['IMC > 25 kg/m²', 1], ['Edema de extremidades inferiores', 1], ['Várices', 1],
+    ['Embarazo o puerperio (< 1 mes)', 1], ['Anticonceptivos orales o terapia hormonal', 1], ['Sepsis (< 1 mes)', 1], ['Enfermedad pulmonar grave, incl. neumonía (< 1 mes)', 1],
+    ['Función pulmonar anormal (EPOC)', 1], ['Infarto agudo al miocardio', 1], ['Insuficiencia cardíaca (< 1 mes)', 1], ['Enfermedad inflamatoria intestinal', 1], ['Paciente médico en reposo en cama', 1],
+    ['Edad 61–74 años', 2], ['Cirugía artroscópica', 2], ['Cirugía mayor abierta (> 45 min)', 2], ['Cirugía laparoscópica (> 45 min)', 2], ['Cáncer (actual o previo)', 2], ['Reposo en cama > 72 h', 2], ['Yeso o inmovilizador', 2], ['Acceso venoso central', 2],
+    ['Edad ≥ 75 años', 3], ['Historia de TEV (TVP/TEP)', 3], ['Historia familiar de TEV', 3], ['Factor V Leiden', 3], ['Protrombina 20210A', 3], ['Anticoagulante lúpico', 3], ['Anticuerpos anticardiolipina', 3], ['Hiperhomocisteinemia', 3], ['Trombocitopenia inducida por heparina', 3], ['Otra trombofilia congénita o adquirida', 3],
+    ['ACV (< 1 mes)', 5], ['Artroplastia electiva de cadera o rodilla', 5], ['Fractura de cadera, pelvis o pierna', 5], ['Lesión medular aguda / parálisis (< 1 mes)', 5]
+  ],
+  interpret(s) {
+    if (s === 0) return { interp: 'Riesgo muy bajo', cls: 'ok', detail: 'Deambulación precoz.' };
+    if (s <= 2) return { interp: 'Riesgo bajo', cls: 'ok', detail: 'Profilaxis mecánica (compresión neumática intermitente).' };
+    if (s <= 4) return { interp: 'Riesgo moderado', cls: 'warn', detail: 'Profilaxis farmacológica o mecánica según riesgo de sangrado.' };
+    return { interp: 'Riesgo alto', cls: 'bad', detail: 'Profilaxis farmacológica (HBPM/fondaparinux) + mecánica; en cirugía ortopédica mayor extender hasta 28–35 días. Toda fractura de cadera puntúa ≥ 5. Decisión final del tratante.' };
+  },
+  ref: 'Caprini JA. Dis Mon 2005;51:70-8. ASH 2019 (TEV quirúrgico); AAOS 2022 (fractura de cadera); CHEST 2012.'
+});
+
+/* ---- FRAX (enlace externo; NO se implementa el algoritmo, es propietario) ---- */
+CALCS.push({
+  id: 'frax', abbr: 'FRAX', name: 'FRAX® Chile', desc: 'Riesgo de fractura a 10 años (herramienta externa)',
+  type: 'custom',
+  render() {
+    const saved = store.get('frax', { major: '', hip: '', date: '', note: '' });
+    return `<p class="muted">FRAX® es una herramienta propietaria de la Universidad de Sheffield; esta app no la replica. Abra la calculadora oficial (modelo Chile) y anote aquí el resultado para la ficha.</p>
+      <a class="btn block" target="_blank" rel="noopener" href="https://frax.shef.ac.uk/FRAX/tool.aspx?country=61">Abrir FRAX® Chile ↗</a>
+      <p class="muted" style="margin-top:10px">Datos que pide FRAX: edad, sexo, peso, talla, fractura previa, fractura de cadera en padres, tabaquismo, glucocorticoides, artritis reumatoide, osteoporosis secundaria, alcohol ≥ 3 unidades/día y DMO de cuello femoral (opcional).</p>
+      <div class="field"><label>Riesgo fractura osteoporótica mayor (%)</label><input type="number" name="major" inputmode="decimal" step="0.1" value="${esc(saved.major)}"></div>
+      <div class="field"><label>Riesgo fractura de cadera (%)</label><input type="number" name="hip" inputmode="decimal" step="0.1" value="${esc(saved.hip)}"></div>
+      <div class="field"><label>Fecha / paciente (iniciales)</label><input type="text" name="date" value="${esc(saved.date)}" placeholder="ej. 22-10 · J.P."></div>
+      <div class="field"><label>Nota</label><textarea name="note" placeholder="con/sin DMO, observaciones">${esc(saved.note)}</textarea></div>`;
+  },
+  calc(root) {
+    const g = n => $(`[name=${n}]`, root).value;
+    const d = { major: g('major'), hip: g('hip'), date: g('date'), note: g('note') };
+    store.set('frax', d);
+    if (!d.major && !d.hip) { toast('Anotación guardada'); return null; }
+    const maj = +d.major, hip = +d.hip;
+    const high = maj >= 20 || hip >= 3;
+    return { score: `Mayor ${d.major || '–'}% · Cadera ${d.hip || '–'}%`, cls: high ? 'bad' : 'warn',
+      interp: high ? 'Riesgo alto (umbral orientativo NOF/AACE: mayor ≥ 20% o cadera ≥ 3%)' : 'Bajo el umbral orientativo de tratamiento',
+      detail: 'Anotación guardada en este dispositivo. Los umbrales de intervención deben adaptarse al contexto local y al juicio clínico (fractura previa por fragilidad = indicación de tratamiento independiente del FRAX).' };
+  },
+  btnLabel: 'Guardar anotación',
+  ref: 'Kanis JA, et al. Osteoporos Int 2008;19:385-97. Modelo Chile: frax.shef.ac.uk.'
+});
+
+/* ---- Timed Up and Go ---- */
+CALCS.push({
+  id: 'tug', abbr: 'TUG', name: 'Timed Up and Go', desc: 'Movilidad y riesgo de caídas',
+  type: 'custom',
+  render() {
+    return `<p class="muted">Paciente sentado en silla con apoyabrazos. A la señal: se levanta, camina 3 metros a paso habitual, gira, vuelve y se sienta. Puede usar su ayuda técnica habitual. Cronometrar desde la señal hasta que se sienta.</p>
+      <div class="field"><label>Tiempo (segundos)</label><input type="number" name="t" inputmode="decimal" step="0.1"></div>`;
+  },
+  calc(root) {
+    const t = +$('[name=t]', root).value; if (!t) return null;
+    let interp, cls, detail;
+    if (t < 10) { interp = 'Movilidad normal'; cls = 'ok'; detail = 'Independiente en movilidad.'; }
+    else if (t < 12) { interp = 'Normal para adulto mayor'; cls = 'ok'; detail = 'Observar calidad de la marcha (pasos cortos, inestabilidad al girar).'; }
+    else if (t < 20) { interp = 'Riesgo de caídas aumentado'; cls = 'warn'; detail = '≥ 12 s se asocia a mayor riesgo de caídas (CDC STEADI). Evaluación multifactorial de caídas, kinesiología.'; }
+    else if (t < 30) { interp = 'Movilidad reducida'; cls = 'bad'; detail = 'Requiere ayuda en movilidad; alto riesgo de caídas.'; }
+    else { interp = 'Dependencia en movilidad'; cls = 'bad'; detail = '≥ 30 s: dependiente en la mayoría de las transferencias; alto riesgo de caídas.'; }
+    return { score: `${t} s`, interp, cls, detail };
+  },
+  ref: 'Podsiadlo D, Richardson S. J Am Geriatr Soc 1991;39:142-8. CDC STEADI (corte ≥ 12 s).'
+});
+
+/* ---- IMC adulto mayor ---- */
+CALCS.push({
+  id: 'imc', abbr: 'IMC', name: 'IMC adulto mayor', desc: 'Índice de masa corporal con puntos de corte MINSAL (≥ 65 años)',
+  type: 'custom',
+  render() {
+    return `<div class="field"><label>Peso (kg)</label><input type="number" name="wt" inputmode="decimal" step="0.1"></div>
+      <div class="field"><label>Talla (cm)</label><input type="number" name="ht" inputmode="numeric"></div>
+      <p class="muted">Si no se puede medir de pie, estimar talla por altura de rodilla o envergadura.</p>`;
+  },
+  calc(root) {
+    const wt = +$('[name=wt]', root).value, ht = +$('[name=ht]', root).value; if (!wt || !ht) return null;
+    const b = wt / Math.pow(ht / 100, 2);
+    let interp, cls;
+    if (b <= 23) { interp = 'Enflaquecido (≤ 23)'; cls = 'bad'; }
+    else if (b < 28) { interp = 'Normal (23,1 – 27,9)'; cls = 'ok'; }
+    else if (b < 32) { interp = 'Sobrepeso (28 – 31,9)'; cls = 'warn'; }
+    else { interp = 'Obesidad (≥ 32)'; cls = 'bad'; }
+    return { score: b.toFixed(1), interp, cls, detail: 'Puntos de corte para personas ≥ 65 años según EMPAM (MINSAL Chile). Complementar con pérdida de peso reciente, circunferencia de pantorrilla (< 31 cm sugiere sarcopenia) y MNA-SF.' };
+  },
+  ref: 'MINSAL Chile. Manual de aplicación del Examen de Medicina Preventiva del Adulto Mayor (EMPAM).'
+});
+
+/* ======================= Calculadoras nuevas v0.2 ======================= */
+
+/* ---- GDS-FAST (Reisberg) ---- */
+CALCS.push({
+  id: 'fast', abbr: 'FAST', name: 'GDS-FAST (Reisberg)', desc: 'Estadio funcional de la demencia 1–7 con subetapas 6a–7f',
+  type: 'custom',
+  levels: [
+    ['1', 'Sin deterioro', 'Sin déficit subjetivo ni objetivo. Función normal.'],
+    ['2', 'Deterioro muy leve (olvido benigno)', 'Quejas subjetivas: olvida dónde dejó objetos, nombres conocidos. Sin déficit objetivo en el trabajo o lo social.'],
+    ['3', 'Deterioro leve (DCL)', 'Déficit notorio para terceros en tareas exigentes: se pierde en lugares no familiares, menor rendimiento laboral, dificultad para encontrar palabras.'],
+    ['4', 'Deterioro moderado (demencia leve)', 'Dificultad en tareas complejas: manejar finanzas, hacer compras, planificar una comida para invitados.'],
+    ['5', 'Deterioro moderadamente severo (demencia moderada)', 'Necesita ayuda para elegir ropa adecuada a la ocasión o al clima.'],
+    ['6a', '6a', 'Necesita ayuda para vestirse (se pone la ropa al revés, mal abotonada).'],
+    ['6b', '6b', 'Necesita ayuda para bañarse (temperatura del agua, no se lava bien).'],
+    ['6c', '6c', 'Necesita ayuda con la mecánica del baño (olvida tirar la cadena, limpiarse).'],
+    ['6d', '6d', 'Incontinencia urinaria.'],
+    ['6e', '6e', 'Incontinencia fecal.'],
+    ['7a', '7a', 'Lenguaje limitado a unas 6 palabras inteligibles al día.'],
+    ['7b', '7b', 'Vocabulario limitado a una sola palabra inteligible.'],
+    ['7c', '7c', 'Pérdida de la capacidad de caminar sin ayuda.'],
+    ['7d', '7d', 'No puede mantenerse sentado sin apoyo.'],
+    ['7e', '7e', 'Pierde la capacidad de sonreír.'],
+    ['7f', '7f', 'No sostiene la cabeza; estupor/coma.']
+  ],
+  render() {
+    return `<p class="muted">Seleccionar la etapa más avanzada que el paciente presenta de forma consistente. Etapa 6 = demencia moderadamente severa; etapa 7 = demencia severa.</p>
+      <div class="opt">${this.levels.map(l => `<label><input type="radio" name="fast" value="${l[0]}"><span><b>${l[0] === l[1] ? 'Etapa ' + l[0] : l[0] + ' · ' + l[1]}</b><br><span class="muted">${l[2]}</span></span></label>`).join('')}</div>`;
+  },
+  calc(root) {
+    const v = $('input[name=fast]:checked', root); if (!v) return null;
+    const st = v.value; const n = parseInt(st, 10);
+    let interp, cls, detail;
+    if (n <= 2) { interp = 'Sin demencia'; cls = 'ok'; detail = 'Función conservada; si hay quejas cognitivas, tamizaje (Mini-Cog/MoCA) y seguimiento.'; }
+    else if (n === 3) { interp = 'Deterioro cognitivo leve'; cls = 'warn'; detail = 'Estudio etiológico, control de factores de riesgo vascular, seguimiento neurocognitivo.'; }
+    else if (n === 4) { interp = 'Demencia leve'; cls = 'warn'; detail = 'Supervisión en AIVD (finanzas, fármacos, conducción). Planificación anticipada de cuidados mientras conserva capacidad de decidir.'; }
+    else if (n === 5) { interp = 'Demencia moderada'; cls = 'warn'; detail = 'Asistencia en AIVD y supervisión; evaluar cuidador (Zarit) y red de apoyo.'; }
+    else if (n === 6) { interp = 'Demencia moderadamente severa'; cls = 'bad'; detail = 'Dependencia progresiva en ABVD. Prevención de caídas, UPP, incontinencia; conversación sobre objetivos de cuidado y LET.'; }
+    else { interp = 'Demencia severa (avanzada)'; cls = 'bad'; detail = (['7c', '7d', '7e', '7f'].includes(st) ? 'FAST ≥ 7c: criterio de demencia avanzada usado para elegibilidad de cuidados paliativos/hospice (NHPCO). ' : '') + 'Enfoque paliativo: confort, alimentación cuidadosa a mano (no sondas de rutina), evitar hospitalizaciones y medidas desproporcionadas; apoyo al cuidador.'; }
+    return { score: `FAST ${st}`, interp, cls, detail };
+  },
+  ref: 'Reisberg B. Functional Assessment Staging (FAST). Psychopharmacol Bull 1988;24:653-9. Reisberg B, et al. Global Deterioration Scale. Am J Psychiatry 1982;139:1136-9.'
+});
+
+/* ---- Lawton & Brody AIVD ---- */
+CALCS.push({
+  id: 'lawton', abbr: 'AIVD', name: 'Lawton & Brody · AIVD', desc: 'Actividades instrumentales, 8 ítems (0–8)',
+  type: 'items', mode: 'radio',
+  help: 'Puntuar la situación basal (antes de la enfermedad aguda). Versión 8 ítems para ambos sexos; en la versión original los hombres no puntuaban comida, casa ni lavado (máx. 5).',
+  items: [
+    ['Uso del teléfono', [[1, 'Lo usa por iniciativa propia, marca números / contesta y marca algunos números conocidos'], [0, 'No lo usa o solo contesta']]],
+    ['Compras', [[1, 'Hace todas las compras necesarias de forma independiente'], [0, 'Solo compras pequeñas, necesita acompañante o incapaz']]],
+    ['Preparación de comida', [[1, 'Planifica, prepara y sirve comidas adecuadas de forma independiente'], [0, 'Solo si le dan los ingredientes, calienta/sirve o necesita que le preparen']]],
+    ['Cuidado de la casa', [[1, 'Mantiene la casa solo o con ayuda ocasional en trabajos pesados'], [0, 'Solo tareas livianas sin mantener limpieza adecuada, o no participa']]],
+    ['Lavado de ropa', [[1, 'Lava su ropa personal (toda o prendas pequeñas)'], [0, 'Todo el lavado lo hace otra persona']]],
+    ['Uso de transporte', [[1, 'Viaja solo en transporte público, taxi o conduce'], [0, 'Solo acompañado o no viaja']]],
+    ['Responsabilidad con la medicación', [[1, 'Toma su medicación en dosis y horarios correctos'], [0, 'Necesita que se la preparen / recuerden, o incapaz']]],
+    ['Manejo de finanzas', [[1, 'Maneja asuntos financieros independientemente (presupuesto, cheques, banco)'], [0, 'Solo compras diarias y necesita ayuda con el resto, o incapaz']]]
+  ],
+  interpret(s) {
+    if (s === 8) return { interp: 'Independiente en AIVD', cls: 'ok' };
+    if (s >= 6) return { interp: 'Dependencia leve', cls: 'ok', detail: 'Revisar qué AIVD falla: puede ser el primer signo de deterioro cognitivo.' };
+    if (s >= 4) return { interp: 'Dependencia moderada', cls: 'warn', detail: 'Correlacionar con cognición y red de apoyo; supervisión de fármacos y finanzas.' };
+    if (s >= 2) return { interp: 'Dependencia severa', cls: 'bad' };
+    return { interp: 'Dependencia total en AIVD', cls: 'bad' };
+  },
+  ref: 'Lawton MP, Brody EM. Gerontologist 1969;9:179-86.'
+});
+
+/* ---- Yesavage GDS-15 ---- */
+CALCS.push({
+  id: 'gds15', abbr: 'GDS', name: 'Yesavage GDS-15', desc: 'Tamizaje de depresión en el adulto mayor (0–15)',
+  type: 'items', mode: 'radio', compact: true,
+  help: 'Preguntar cómo se ha sentido durante la última semana. Puntúa 1 la respuesta señalada entre paréntesis. No aplicar en delirium ni demencia moderada-severa.',
+  items: [
+    ['¿Está básicamente satisfecho/a con su vida? (No)', [[0, 'Sí'], [1, 'No']]],
+    ['¿Ha abandonado muchas de sus actividades e intereses? (Sí)', [[1, 'Sí'], [0, 'No']]],
+    ['¿Siente que su vida está vacía? (Sí)', [[1, 'Sí'], [0, 'No']]],
+    ['¿Se aburre a menudo? (Sí)', [[1, 'Sí'], [0, 'No']]],
+    ['¿Está de buen ánimo la mayor parte del tiempo? (No)', [[0, 'Sí'], [1, 'No']]],
+    ['¿Tiene miedo de que algo malo le vaya a pasar? (Sí)', [[1, 'Sí'], [0, 'No']]],
+    ['¿Se siente feliz la mayor parte del tiempo? (No)', [[0, 'Sí'], [1, 'No']]],
+    ['¿Se siente a menudo desamparado/a o abandonado/a? (Sí)', [[1, 'Sí'], [0, 'No']]],
+    ['¿Prefiere quedarse en casa en vez de salir y hacer cosas nuevas? (Sí)', [[1, 'Sí'], [0, 'No']]],
+    ['¿Siente que tiene más problemas de memoria que la mayoría de la gente? (Sí)', [[1, 'Sí'], [0, 'No']]],
+    ['¿Piensa que es maravilloso estar vivo/a? (No)', [[0, 'Sí'], [1, 'No']]],
+    ['¿Se siente inútil tal como está ahora? (Sí)', [[1, 'Sí'], [0, 'No']]],
+    ['¿Se siente lleno/a de energía? (No)', [[0, 'Sí'], [1, 'No']]],
+    ['¿Siente que su situación es desesperanzada? (Sí)', [[1, 'Sí'], [0, 'No']]],
+    ['¿Cree que la mayoría de la gente está mejor que usted? (Sí)', [[1, 'Sí'], [0, 'No']]]
+  ],
+  interpret(s) {
+    if (s <= 4) return { interp: 'Sin depresión probable', cls: 'ok' };
+    if (s <= 8) return { interp: 'Depresión leve probable', cls: 'warn', detail: 'Tamizaje positivo (≥ 5): entrevista clínica dirigida, descartar hipotiroidismo, fármacos, duelo; considerar psicoterapia/ISRS según severidad.' };
+    if (s <= 11) return { interp: 'Depresión moderada probable', cls: 'bad', detail: 'Evaluación clínica completa, riesgo suicida, tratamiento y seguimiento.' };
+    return { interp: 'Depresión severa probable', cls: 'bad', detail: 'Evaluar riesgo suicida hoy. Derivación/manejo especializado.' };
+  },
+  ref: 'Sheikh JI, Yesavage JA. Clin Gerontol 1986;5:165-73. Corte ≥ 5 (S 92% / E 81%).'
+});
+
+/* ---- MNA-SF ---- */
+CALCS.push({
+  id: 'mnasf', abbr: 'MNA', name: 'MNA-SF', desc: 'Mini Nutritional Assessment, forma corta (0–14)',
+  type: 'items', mode: 'radio',
+  items: [
+    ['A. ¿Ha comido menos por falta de apetito, problemas digestivos, dificultad para masticar o tragar en los últimos 3 meses?', [[0, 'Ha comido mucho menos'], [1, 'Ha comido menos'], [2, 'Ha comido igual']]],
+    ['B. Pérdida de peso en los últimos 3 meses', [[0, 'Pérdida > 3 kg'], [1, 'No lo sabe'], [2, 'Pérdida entre 1 y 3 kg'], [3, 'Sin pérdida de peso']]],
+    ['C. Movilidad', [[0, 'De la cama al sillón'], [1, 'Autonomía en el interior'], [2, 'Sale del domicilio']]],
+    ['D. ¿Enfermedad aguda o estrés psicológico en los últimos 3 meses?', [[0, 'Sí'], [2, 'No']]],
+    ['E. Problemas neuropsicológicos', [[0, 'Demencia o depresión grave'], [1, 'Demencia leve'], [2, 'Sin problemas psicológicos']]],
+    ['F. IMC (kg/m²) — si no se puede medir, usar circunferencia de pantorrilla (CP)', [[0, 'IMC < 19'], [1, 'IMC 19 a < 21'], [2, 'IMC 21 a < 23'], [3, 'IMC ≥ 23'], [0, 'Sin IMC: CP < 31 cm'], [3, 'Sin IMC: CP ≥ 31 cm']]]
+  ],
+  interpret(s) {
+    if (s >= 12) return { interp: 'Estado nutricional normal', cls: 'ok', detail: 'Reevaluar si cambia la condición clínica.' };
+    if (s >= 8) return { interp: 'Riesgo de malnutrición', cls: 'warn', detail: 'Evaluación nutricional completa, registro de ingesta, suplementación oral si procede; revisar deglución, dentadura y ánimo.' };
+    return { interp: 'Malnutrición', cls: 'bad', detail: 'Intervención nutricional (nutricionista), buscar causas reversibles (disfagia, depresión, fármacos, dolor, enfermedad), suplementos hiperproteicos.' };
+  },
+  ref: 'Kaiser MJ, et al. J Nutr Health Aging 2009;13:782-8. Rubenstein LZ, et al. J Gerontol A 2001;56:M366-72.'
+});
+
+/* ---- Braden ---- */
+CALCS.push({
+  id: 'braden', abbr: 'Br', name: 'Escala de Braden', desc: 'Riesgo de úlceras/lesiones por presión (6–23)',
+  type: 'items', mode: 'radio',
+  items: [
+    ['Percepción sensorial', [[1, 'Completamente limitada'], [2, 'Muy limitada'], [3, 'Ligeramente limitada'], [4, 'Sin limitaciones']]],
+    ['Exposición a la humedad', [[1, 'Constantemente húmeda'], [2, 'A menudo húmeda'], [3, 'Ocasionalmente húmeda'], [4, 'Raramente húmeda']]],
+    ['Actividad', [[1, 'Encamado'], [2, 'En silla'], [3, 'Deambula ocasionalmente'], [4, 'Deambula frecuentemente']]],
+    ['Movilidad', [[1, 'Completamente inmóvil'], [2, 'Muy limitada'], [3, 'Ligeramente limitada'], [4, 'Sin limitaciones']]],
+    ['Nutrición', [[1, 'Muy pobre'], [2, 'Probablemente inadecuada'], [3, 'Adecuada'], [4, 'Excelente']]],
+    ['Fricción y cizallamiento', [[1, 'Problema'], [2, 'Problema potencial'], [3, 'Sin problema aparente']]]
+  ],
+  interpret(s) {
+    if (s <= 9) return { interp: 'Riesgo muy alto', cls: 'bad', detail: 'Superficie de redistribución de presión, cambios posturales c/2 h, protección de talones, nutrición, manejo de humedad. Ver Checklist UPP.' };
+    if (s <= 12) return { interp: 'Riesgo alto', cls: 'bad', detail: 'Plan de prevención completo (ver Checklist UPP).' };
+    if (s <= 14) return { interp: 'Riesgo moderado', cls: 'warn', detail: 'Cambios posturales, superficie adecuada, vigilancia de piel diaria.' };
+    if (s <= 18) return { interp: 'Riesgo bajo', cls: 'warn', detail: 'Medidas generales; reevaluar si cambia la movilidad.' };
+    return { interp: 'Sin riesgo', cls: 'ok', detail: 'Reevaluar cada 48–72 h o ante cambio clínico.' };
+  },
+  ref: 'Bergstrom N, Braden BJ, et al. Nurs Res 1987;36:205-10.'
+});
+
+/* ---- FRAIL ---- */
+CALCS.push({
+  id: 'frail', abbr: 'FRAIL', name: 'Escala FRAIL', desc: 'Tamizaje de fragilidad, 5 ítems (0–5)',
+  type: 'items', mode: 'check',
+  help: 'Marcar lo que aplique.',
+  items: [
+    ['Fatiga: se ha sentido cansado/a la mayor parte del tiempo o todo el tiempo en las últimas 4 semanas', 1],
+    ['Resistencia: dificultad para subir 10 escalones sin descansar y sin ayuda', 1],
+    ['Aeróbico (deambulación): dificultad para caminar una cuadra (≈ 100 m) solo/a y sin ayuda', 1],
+    ['Enfermedades (Illness): 5 o más enfermedades crónicas', 1],
+    ['Pérdida de peso ≥ 5% en el último año', 1]
+  ],
+  interpret(s) {
+    if (s === 0) return { interp: 'Robusto', cls: 'ok' };
+    if (s <= 2) return { interp: 'Pre-frágil', cls: 'warn', detail: 'Ejercicio multicomponente, optimizar nutrición (proteínas ≥ 1–1,2 g/kg/día), revisar fármacos.' };
+    return { interp: 'Frágil', cls: 'bad', detail: 'VGI completa, objetivos de cuidado, prevención de iatrogenia y hospitalización; considerar CFS para graduar.' };
+  },
+  ref: 'Morley JE, Malmstrom TK, Miller DK. J Nutr Health Aging 2012;16:601-8.'
+});
+
+/* ---- Carga anticolinérgica (ACB) ---- */
+CALCS.push({
+  id: 'acb', abbr: 'ACB', name: 'Carga anticolinérgica (ACB)', desc: 'Anticholinergic Cognitive Burden: suma por fármaco (1/2/3)',
+  type: 'custom',
+  drugs: [
+    // puntaje 3
+    ['Amitriptilina', 3], ['Nortriptilina', 3], ['Imipramina', 3], ['Clomipramina', 3], ['Doxepina', 3], ['Paroxetina', 3],
+    ['Clorfenamina', 3], ['Difenhidramina', 3], ['Hidroxizina', 3], ['Prometazina', 3], ['Dimenhidrinato', 3], ['Meclizina', 3], ['Ciproheptadina', 3], ['Clemastina', 3],
+    ['Oxibutinina', 3], ['Tolterodina', 3], ['Solifenacina', 3], ['Darifenacina', 3], ['Fesoterodina', 3], ['Trospio', 3], ['Flavoxato', 3], ['Propiverina', 3],
+    ['Clozapina', 3], ['Olanzapina', 3], ['Quetiapina', 3], ['Clorpromazina', 3], ['Tioridazina', 3], ['Perfenazina', 3],
+    ['Trihexifenidilo', 3], ['Biperideno (≈ benzotropina)', 3], ['Atropina', 3], ['Escopolamina / hioscina', 3], ['Propantelina', 3], ['Diciclomina', 3],
+    ['Orfenadrina', 3], ['Metocarbamol', 3], ['Carisoprodol', 3],
+    // puntaje 2
+    ['Amantadina', 2], ['Carbamazepina', 2], ['Oxcarbazepina', 2], ['Ciclobenzaprina', 2], ['Loxapina', 2], ['Petidina (meperidina)', 2], ['Nefopam', 2], ['Pimozida', 2], ['Belladona (alcaloides)', 2],
+    // puntaje 1
+    ['Alprazolam', 1], ['Diazepam', 1], ['Clorazepato', 1], ['Aripiprazol', 1], ['Haloperidol', 1], ['Risperidona', 1], ['Paliperidona', 1], ['Trazodona', 1], ['Venlafaxina', 1], ['Fluvoxamina', 1], ['Bupropión', 1],
+    ['Atenolol', 1], ['Metoprolol', 1], ['Captopril', 1], ['Hidralazina', 1], ['Nifedipino', 1], ['Isosorbide', 1], ['Digoxina', 1], ['Quinidina', 1], ['Dipiridamol', 1], ['Warfarina', 1],
+    ['Furosemida', 1], ['Clortalidona', 1], ['Triamtereno', 1], ['Cimetidina', 1], ['Ranitidina', 1], ['Loperamida', 1], ['Colchicina', 1],
+    ['Cetirizina', 1], ['Loratadina', 1], ['Desloratadina', 1], ['Codeína', 1], ['Morfina', 1], ['Fentanilo', 1], ['Teofilina', 1], ['Prednisona', 1], ['Hidrocortisona', 1]
+  ],
+  render() {
+    return `<p class="muted">Marque los fármacos que el paciente usa. Puede buscar por nombre. Lista basada en la escala ACB (3 = fuertemente anticolinérgico).</p>
+      <input class="search" type="search" name="acbq" placeholder="Buscar fármaco…" autocomplete="off">
+      <div class="opt" id="acbList">${this.drugs.map((d, i) => `<label data-n="${esc(d[0].toLowerCase())}"><input type="checkbox" name="acb" value="${d[1]}" data-i="${i}"><span>${esc(d[0])}</span><span class="pts">+${d[1]}</span></label>`).join('')}</div>
+      <div class="field"><label>Otros fármacos anticolinérgicos no listados (puntaje manual)</label><input type="number" name="acbx" inputmode="numeric" placeholder="0" min="0"></div>`;
+  },
+  afterRender(root) {
+    const q = $('[name=acbq]', root), list = $('#acbList', root);
+    q.oninput = () => { const t = q.value.trim().toLowerCase(); $$('label', list).forEach(l => { l.style.display = (!t || l.dataset.n.includes(t) || l.querySelector('input').checked) ? '' : 'none'; }); };
+  },
+  calc(root) {
+    const sel = $$('input[name=acb]:checked', root);
+    const extra = +($('[name=acbx]', root).value || 0);
+    const s = sel.reduce((a, b) => a + +b.value, 0) + extra;
+    const names = sel.map(x => this.drugs[+x.dataset.i][0]).join(', ');
+    const cls = s === 0 ? 'ok' : s <= 2 ? 'warn' : 'bad';
+    const interp = s === 0 ? 'Sin carga anticolinérgica' : s <= 2 ? 'Carga anticolinérgica baja' : 'Carga anticolinérgica alta (≥ 3)';
+    return { score: `ACB ${s}`, interp, cls, detail: (names ? 'Fármacos: ' + names + '. ' : '') + (s >= 3 ? 'ACB ≥ 3 se asocia a mayor riesgo de deterioro cognitivo, delirium, caídas y mortalidad. Priorizar desprescripción o cambio a alternativas (ver Checklist desprescripción). ' : 'Cada punto adicional aumenta el riesgo de deterioro cognitivo; revisar indicaciones.') };
+  },
+  ref: 'Boustani M, et al. Aging Health 2008;4:311-20. Campbell N, et al. ACB scale update 2012 (Indiana University Center for Aging Research).'
+});
+
+/* ---- 4AT ---- */
+CALCS.push({
+  id: 'at4', abbr: '4AT', name: '4AT · Delirium', desc: 'Tamizaje rápido de delirium y deterioro cognitivo (0–12)',
+  type: 'items', mode: 'radio',
+  items: [
+    ['1. Alerta. Normal (completamente alerta, no agitado) vs alterado: somnoliento (>10 s para responder) o agitado/hiperalerta', [[0, 'Normal'], [4, 'Claramente alterado']]],
+    ['2. AMT4: edad, fecha de nacimiento, lugar (nombre del hospital), año actual', [[0, 'Sin errores'], [1, '1 error'], [2, '≥ 2 errores o no evaluable']]],
+    ['3. Atención: "Dígame los meses del año al revés, empezando por diciembre"', [[0, '≥ 7 meses correctos'], [1, 'Empieza pero < 7 meses, o se niega'], [2, 'No evaluable (no puede empezar: somnoliento, inatento)']]],
+    ['4. Cambio agudo o curso fluctuante: evidencia de cambio o fluctuación significativa en alerta, cognición u otra función mental en las últimas 2 semanas, aún presente en las últimas 24 h', [[0, 'No'], [4, 'Sí']]]
+  ],
+  interpret(s) {
+    if (s >= 4) return { interp: 'Posible delirium ± deterioro cognitivo', cls: 'bad', detail: 'Confirmar con evaluación clínica (CAM), buscar causas precipitantes, medidas no farmacológicas (ver Checklist antidelirium).' };
+    if (s >= 1) return { interp: 'Posible deterioro cognitivo', cls: 'warn', detail: 'Sin evidencia de delirium en este tamizaje; completar evaluación cognitiva cuando el paciente esté estable.' };
+    return { interp: 'Delirium o deterioro cognitivo severo poco probables', cls: 'ok', detail: 'No descarta delirium: repetir si cambia el estado mental.' };
+  },
+  ref: 'Bellelli G, et al. Age Ageing 2014;43:496-502. www.the4AT.com'
+});
+
+/* ---- CKD-EPI 2021 ---- */
+CALCS.push({
+  id: 'ckdepi', abbr: 'VFG', name: 'CKD-EPI 2021', desc: 'VFG estimada por creatinina, sin coeficiente de raza',
+  type: 'custom',
+  render() {
+    return `<div class="field"><label>Edad (años)</label><input type="number" name="age" inputmode="numeric"></div>
+      <div class="field"><label>Creatinina plasmática (mg/dL)</label><input type="number" name="cr" inputmode="decimal" step="0.01"></div>
+      <div class="field"><label>Sexo</label><div class="seg"><label><input type="radio" name="sex" value="m">Hombre</label><label><input type="radio" name="sex" value="f">Mujer</label></div></div>
+      <p class="muted">En sarcopenia o bajo peso la creatinina sobreestima la VFG: considerar cistatina C o Cockcroft-Gault para ajuste de fármacos.</p>`;
+  },
+  calc(root) {
+    const age = +$('[name=age]', root).value, cr = +$('[name=cr]', root).value, sx = $('input[name=sex]:checked', root);
+    if (!age || !cr || !sx) return null;
+    const f = sx.value === 'f';
+    const k = f ? 0.7 : 0.9, a = f ? -0.241 : -0.302;
+    const r = cr / k;
+    const egfr = 142 * Math.pow(Math.min(r, 1), a) * Math.pow(Math.max(r, 1), -1.2) * Math.pow(0.9938, age) * (f ? 1.012 : 1);
+    let st, cls;
+    if (egfr >= 90) { st = 'G1 · Normal o alta'; cls = 'ok'; }
+    else if (egfr >= 60) { st = 'G2 · Levemente disminuida'; cls = 'ok'; }
+    else if (egfr >= 45) { st = 'G3a · Leve a moderadamente disminuida'; cls = 'warn'; }
+    else if (egfr >= 30) { st = 'G3b · Moderada a severamente disminuida'; cls = 'warn'; }
+    else if (egfr >= 15) { st = 'G4 · Severamente disminuida'; cls = 'bad'; }
+    else { st = 'G5 · Falla renal'; cls = 'bad'; }
+    return { score: `${egfr.toFixed(0)} mL/min/1,73 m²`, interp: st, cls,
+      detail: 'ERC requiere VFG < 60 por > 3 meses o marcadores de daño renal (albuminuria). Categoría KDIGO por VFG; completar con albuminuria (A1–A3). Para dosis de fármacos, muchas fichas técnicas usan Cockcroft-Gault.' };
+  },
+  ref: 'Inker LA, et al. N Engl J Med 2021;385:1737-49. KDIGO 2024 CKD Guideline.'
+});
+
+/* ---- SPPB ---- */
+CALCS.push({
+  id: 'sppb', abbr: 'SPPB', name: 'SPPB', desc: 'Short Physical Performance Battery: equilibrio, marcha 4 m, levantarse 5 veces (0–12)',
+  type: 'custom',
+  render() {
+    return `<div class="qtitle">1. Equilibrio (mantener 10 s cada posición)</div>
+      <div class="qhelp">Pies juntos → semitándem → tándem. Si no logra 10 s en una posición, no se prueba la siguiente.</div>
+      <div class="opt">
+        <label><input type="radio" name="bal" value="0"><span>Pies juntos &lt; 10 s o no lo intenta</span><span class="pts">0</span></label>
+        <label><input type="radio" name="bal" value="1"><span>Pies juntos 10 s; semitándem &lt; 10 s</span><span class="pts">1</span></label>
+        <label><input type="radio" name="bal" value="2"><span>Semitándem 10 s; tándem &lt; 3 s</span><span class="pts">2</span></label>
+        <label><input type="radio" name="bal" value="3"><span>Semitándem 10 s; tándem 3–9,99 s</span><span class="pts">3</span></label>
+        <label><input type="radio" name="bal" value="4"><span>Tándem 10 s</span><span class="pts">4</span></label>
+      </div>
+      <div class="qtitle">2. Velocidad de marcha (4 metros, paso habitual, mejor de 2 intentos)</div>
+      <div class="field"><label>Tiempo (segundos) — dejar vacío si no puede</label><input type="number" name="gait" inputmode="decimal" step="0.01"></div>
+      <div class="qtitle">3. Levantarse de la silla 5 veces (brazos cruzados)</div>
+      <div class="qhelp">Primero una vez sin brazos; si lo logra, cronometrar 5 repeticiones.</div>
+      <div class="field"><label>Tiempo (segundos) — dejar vacío si no puede o &gt; 60 s</label><input type="number" name="chair" inputmode="decimal" step="0.01"></div>`;
+  },
+  calc(root) {
+    const b = $('input[name=bal]:checked', root); if (!b) return null;
+    const g = +$('[name=gait]', root).value, c = +$('[name=chair]', root).value;
+    const gp = !g ? 0 : g > 8.7 ? 1 : g > 6.2 ? 2 : g > 4.82 ? 3 : 4;
+    const cp = !c || c > 60 ? 0 : c > 16.7 ? 1 : c > 13.69 ? 2 : c > 11.19 ? 3 : 4;
+    const s = +b.value + gp + cp;
+    const vel = g ? ` · velocidad ${(4 / g).toFixed(2)} m/s` : '';
+    let interp, cls;
+    if (s <= 3) { interp = 'Limitación severa'; cls = 'bad'; }
+    else if (s <= 6) { interp = 'Limitación moderada'; cls = 'bad'; }
+    else if (s <= 9) { interp = 'Limitación leve'; cls = 'warn'; }
+    else { interp = 'Rendimiento físico bueno'; cls = 'ok'; }
+    return { score: `${s} / 12`, interp, cls,
+      detail: `Equilibrio ${b.value} · marcha ${gp} · silla ${cp}${vel}. SPPB < 10 predice discapacidad incidente y es criterio de sarcopenia severa (EWGSOP2 ≤ 8). Velocidad de marcha ≤ 0,8 m/s: bajo rendimiento físico.` };
+  },
+  ref: 'Guralnik JM, et al. J Gerontol 1994;49:M85-94. Cruz-Jentoft AJ, et al. EWGSOP2, Age Ageing 2019;48:16-31.'
+});
+
+/* ---- SARC-F ---- */
+CALCS.push({
+  id: 'sarcf', abbr: 'SARC', name: 'SARC-F', desc: 'Tamizaje de sarcopenia, 5 ítems (0–10)',
+  type: 'items', mode: 'radio', compact: true,
+  items: [
+    ['Fuerza: ¿cuánta dificultad tiene para levantar y cargar 4,5 kg (una bolsa de supermercado)?', [[0, 'Ninguna'], [1, 'Alguna'], [2, 'Mucha / no puede']]],
+    ['Asistencia para caminar: ¿cuánta dificultad tiene para cruzar una habitación?', [[0, 'Ninguna'], [1, 'Alguna'], [2, 'Mucha / usa ayuda / no puede']]],
+    ['Levantarse de una silla o cama', [[0, 'Ninguna'], [1, 'Alguna'], [2, 'Mucha / no puede sin ayuda']]],
+    ['Subir 10 escalones', [[0, 'Ninguna'], [1, 'Alguna'], [2, 'Mucha / no puede']]],
+    ['Caídas en el último año', [[0, 'Ninguna'], [1, '1 a 3'], [2, '4 o más']]]
+  ],
+  interpret(s) {
+    if (s >= 4) return { interp: 'Tamizaje POSITIVO para sarcopenia', cls: 'bad', detail: 'Confirmar con fuerza de prensión (dinamometría) y/o SPPB; medir masa muscular si disponible. Ejercicio de resistencia + proteínas 1,2–1,5 g/kg/día.' };
+    return { interp: 'Tamizaje negativo', cls: 'ok', detail: 'Baja sensibilidad: si hay sospecha clínica (pantorrilla < 31 cm, pérdida de peso), evaluar igual.' };
+  },
+  ref: 'Malmstrom TK, Morley JE. J Am Med Dir Assoc 2013;14:531-2. EWGSOP2 2019.'
+});
+
+/* ---- EAT-10 ---- */
+CALCS.push({
+  id: 'eat10', abbr: 'EAT', name: 'EAT-10 · Disfagia', desc: 'Eating Assessment Tool, 10 ítems (0–40)',
+  type: 'items', mode: 'radio', compact: true,
+  help: '¿Hasta qué punto son un problema para usted las siguientes situaciones? 0 = ningún problema · 4 = problema serio.',
+  items: [
+    'Mi problema para tragar me ha hecho perder peso', 'Mi problema para tragar interfiere con mi capacidad para comer fuera de casa', 'Tragar líquidos me supone un esfuerzo extra',
+    'Tragar sólidos me supone un esfuerzo extra', 'Tragar pastillas me supone un esfuerzo extra', 'Tragar es doloroso', 'El placer de comer se ve afectado por mi problema para tragar',
+    'Cuando trago, la comida se me pega en la garganta', 'Toso cuando como', 'Tragar es estresante'
+  ].map(q => [q, [[0, '0'], [1, '1'], [2, '2'], [3, '3'], [4, '4']]]),
+  interpret(s) {
+    if (s >= 3) return { interp: 'Riesgo de disfagia (≥ 3)', cls: 'bad', detail: 'Evaluación clínica de deglución (fonoaudiología), definir nivel IDDSI, medidas antiaspiración (ver Checklist). Considerar videofluoroscopía/FEES según caso.' };
+    return { interp: 'Sin riesgo significativo por autoinforme', cls: 'ok', detail: 'En deterioro cognitivo el autoinforme es poco confiable: complementar con observación de la ingesta y prueba de agua.' };
+  },
+  ref: 'Belafsky PC, et al. Ann Otol Rhinol Laryngol 2008;117:919-24. Burgos R, et al. Nutr Hosp 2012 (versión española).'
+});
+
+/* ---- CURB-65 ---- */
+CALCS.push({
+  id: 'curb', abbr: 'CURB', name: 'CURB-65', desc: 'Gravedad de neumonía adquirida en la comunidad (0–5)',
+  type: 'items', mode: 'check',
+  items: [
+    ['Confusión (de inicio reciente / AMT ≤ 8)', 1],
+    ['Urea > 7 mmol/L (≈ BUN > 19 mg/dL o urea > 42 mg/dL)', 1],
+    ['Frecuencia respiratoria ≥ 30/min', 1],
+    ['Presión arterial: PAS < 90 o PAD ≤ 60 mmHg', 1],
+    ['Edad ≥ 65 años', 1]
+  ],
+  interpret(s) {
+    if (s <= 1) return { interp: 'Riesgo bajo (mortalidad ≈ 1,5%)', cls: 'ok', detail: 'Candidato a manejo ambulatorio si el contexto social/funcional lo permite.' };
+    if (s === 2) return { interp: 'Riesgo intermedio (mortalidad ≈ 9%)', cls: 'warn', detail: 'Hospitalización (o manejo supervisado tipo UC en Casa según criterio).' };
+    return { interp: 'Riesgo alto (mortalidad ≈ 22%)', cls: 'bad', detail: 'Hospitalizar; con 4–5 puntos evaluar UPC. En el adulto mayor la edad siempre puntúa y la confusión puede ser delirium: interpretar junto a fragilidad, objetivos de cuidado y LET.' };
+  },
+  ref: 'Lim WS, et al. Thorax 2003;58:377-82.'
+});
+
+/* ---- Zarit abreviado (7 ítems) ---- */
+CALCS.push({
+  id: 'zarit7', abbr: 'Zarit', name: 'Zarit abreviado (7 ítems)', desc: 'Sobrecarga del cuidador, versión chilena (7–35)',
+  type: 'items', mode: 'radio', compact: true,
+  help: 'Lo responde el cuidador principal. 1 = nunca · 2 = rara vez · 3 = algunas veces · 4 = bastantes veces · 5 = casi siempre.',
+  items: [
+    '¿Siente que, a causa del tiempo que dedica a su familiar, ya no tiene tiempo suficiente para usted mismo/a?',
+    '¿Se siente estresado/a al tener que cuidar a su familiar y tener además que atender otras responsabilidades?',
+    '¿Cree que la situación actual afecta de manera negativa su relación con amigos u otros miembros de su familia?',
+    '¿Se siente agotado/a cuando tiene que estar junto a su familiar?',
+    '¿Siente que su salud se ha visto afectada por tener que cuidar a su familiar?',
+    '¿Siente que ha perdido el control sobre su vida desde que la enfermedad de su familiar se manifestó?',
+    'En general, ¿se siente muy sobrecargado/a al tener que cuidar de su familiar?'
+  ].map(q => [q, [[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5']]]),
+  interpret(s) {
+    if (s >= 17) return { interp: 'Sobrecarga intensa del cuidador', cls: 'bad', detail: 'Intervenir: educación, respiro, trabajo social, red de apoyo, evaluar depresión del cuidador; considerar en el plan de alta e institucionalización.' };
+    return { interp: 'Sin sobrecarga intensa', cls: 'ok', detail: 'Reevaluar en controles; la sobrecarga aumenta con la progresión funcional y conductual.' };
+  },
+  ref: 'Breinbauer H, et al. Rev Med Chile 2009;137:657-65 (validación chilena, corte ≥ 17). Bédard M, et al. Gerontologist 2001;41:652-7.'
+});
+
+/* ---- Render del menú y de cada calculadora ---- */
+function renderCalcMenu() {
+  calcOpen = null;
+  setHeader(TABS.calc.title, TABS.calc.sub, null);
+  $('#view-calc').innerHTML = `<input class="search" type="search" id="calcQ" placeholder="Buscar escala… (ej. delirium, caídas, nutrición)" autocomplete="off">
+    <div class="list" id="calcList">${CALCS.map(c => `
+    <button class="item" data-id="${c.id}" data-n="${esc((c.name + ' ' + c.desc + ' ' + c.abbr).toLowerCase())}"><div class="ic">${c.abbr}</div><div class="t"><b>${c.name}</b><span>${c.desc}</span></div><div class="chev">›</div></button>`).join('')}</div>
+    <p class="muted" style="margin-top:14px">${CALCS.length} escalas. Son apoyo a la valoración geriátrica integral; interpretar siempre en contexto clínico.</p>`;
+  $('#view-calc').onclick = e => { const b = e.target.closest('.item'); if (b) openCalc(b.dataset.id); };
+  $('#calcQ').oninput = e => { const t = e.target.value.trim().toLowerCase(); $$('#calcList .item').forEach(b => { b.style.display = !t || b.dataset.n.includes(t) ? '' : 'none'; }); };
+  window.scrollTo(0, 0);
+}
+
+function openCalc(id) {
+  const c = CALCS.find(x => x.id === id); if (!c) return;
+  calcOpen = id;
+  setHeader(c.name, c.desc, renderCalcMenu);
+  let body = c.pre || '';
+  if (c.type === 'items') {
+    if (c.help) body += `<p class="muted">${c.help}</p>`;
+    if (c.mode === 'radio') {
+      if (c.compact) {
+        body += c.items.map((it, i) => `<div class="qtitle">${i + 1}. ${it[0]}</div><div class="seg c">${it[1].map(o =>
+          `<label><input type="radio" name="q${i}" value="${o[0]}">${o[1]}</label>`).join('')}</div>`).join('');
+      } else {
+        body += c.items.map((it, i) => `<div class="qtitle">${i + 1}. ${it[0]}</div><div class="opt">${it[1].map(o =>
+          `<label><input type="radio" name="q${i}" value="${o[0]}"><span>${o[1]}</span><span class="pts">${o[0]}</span></label>`).join('')}</div>`).join('');
+      }
+    } else {
+      body += `<div class="opt">${c.items.map((it, i) => `<label><input type="checkbox" name="q" value="${it[1]}"><span>${it[0]}</span><span class="pts">+${it[1]}</span></label>`).join('')}</div>`;
+    }
+    if (c.extra) body += c.extra;
+  } else {
+    body += c.render();
+  }
+  $('#view-calc').innerHTML = `<div class="card" id="calcForm">${body}
+    <div class="row" style="margin-top:16px"><button class="btn" id="calcGo">${c.btnLabel || 'Calcular'}</button><button class="btn ghost" id="calcClr">Limpiar</button></div>
+    <div id="calcOut"></div>
+    <div class="ref">Ref.: ${c.ref}</div></div>`;
+  $('#view-calc').onclick = null;
+  const root = $('#calcForm');
+  if (typeof c.afterRender === 'function') c.afterRender(root);
+  const run = () => {
+    let r = null;
+    if (c.type === 'items') {
+      if (c.mode === 'radio') {
+        const vals = c.items.map((_, i) => $(`input[name=q${i}]:checked`, root));
+        if (vals.some(v => !v)) { toast('Faltan ítems por responder'); return; }
+        const s = vals.reduce((a, v) => a + +v.value, 0); r = Object.assign({ score: `${s} / ${maxItems(c)}` }, c.interpret(s, root));
+      } else {
+        const s = $$('input[name=q]:checked', root).reduce((a, v) => a + +v.value, 0);
+        r = c.interpret(s, root); r.score = r.scoreLabel || String(s);
+      }
+    } else {
+      r = c.calc(root);
+      if (!r) { if (c.id !== 'frax') toast('Complete todos los campos'); return; }
+    }
+    $('#calcOut').innerHTML = `<div class="result ${r.cls || ''}"><div class="score">${r.score}</div><div class="interp">${r.interp}</div>${r.detail ? `<p class="muted" style="margin-top:6px">${r.detail}</p>` : ''}
+      <div class="row" style="margin-top:10px"><button class="btn secondary sm" id="calcCopy">Copiar resultado</button></div></div>`;
+    $('#calcCopy').onclick = () => copyText(`${c.name}: ${r.score} — ${r.interp}${r.detail ? '. ' + r.detail : ''}`.replace(/<[^>]+>/g, ''));
+    $('#calcOut').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  $('#calcGo').onclick = run;
+  $('#calcClr').onclick = () => { $$('input,textarea', root).forEach(i => { if (i.type === 'radio' || i.type === 'checkbox') i.checked = false; else i.value = ''; }); $('#calcOut').innerHTML = ''; };
+  window.scrollTo(0, 0);
+}
+function maxItems(c) { return c.items.reduce((a, it) => a + Math.max(...it[1].map(o => o[0])), 0); }
+
+/* ========================= [JS-3] Directorio ========================= */
+/* Todos los valores iniciales están VACÍOS a propósito: completar desde la app o importando un JSON. */
+const DIR_SECTIONS = [
+  'Secretarias', 'Especialistas de turno', 'UC en Casa / Hospitalización domiciliaria',
+  'Farmacia', 'Kinesiología', 'Trabajo social', 'Urgencias'
+];
+function dirData() {
+  const d = store.get('dir', {});
+  DIR_SECTIONS.forEach(s => { if (!Array.isArray(d[s])) d[s] = []; });
+  return d;
+}
+function renderDir() {
+  const d = dirData();
+  const v = $('#view-dir');
+  v.innerHTML = `
+    <div class="note">Directorio del servicio. Los datos se guardan solo en este celular; use <b>Exportar</b> para compartir el JSON con el resto del equipo e <b>Importar</b> para cargarlo. Al distribuir la app, el equipo docente puede dejar un directorio base importado.</div>
+    ${DIR_SECTIONS.map(s => `
+      <div class="dir-sec">
+        <h2>${s} <button class="btn secondary sm" data-add="${esc(s)}">+ Agregar</button></h2>
+        ${d[s].length ? d[s].map((c, i) => contactHTML(s, c, i)).join('') : '<div class="empty">[completar] — sin contactos aún</div>'}
+      </div>`).join('')}
+    <div class="row" style="margin-top:8px">
+      <button class="btn secondary" id="dirExport">Exportar JSON</button>
+      <button class="btn secondary" id="dirImport">Importar JSON</button>
+    </div>
+    <div class="row" style="margin-top:8px"><button class="btn ghost" id="dirPaste">Pegar JSON manualmente</button></div>
+    <input type="file" id="dirFile" accept="application/json,.json" style="display:none">`;
+  v.onclick = e => {
+    const add = e.target.closest('[data-add]'); if (add) return editContact(add.dataset.add, -1);
+    const ed = e.target.closest('[data-edit]'); if (ed) return editContact(ed.dataset.sec, +ed.dataset.edit);
+  };
+  $('#dirExport').onclick = exportDir;
+  $('#dirImport').onclick = () => $('#dirFile').click();
+  $('#dirFile').onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const rd = new FileReader(); rd.onload = () => importDir(rd.result); rd.readAsText(f);
+  };
+  $('#dirPaste').onclick = () => {
+    openModal(`<h2>Pegar JSON del directorio</h2>
+      <div class="field"><textarea id="pasteJson" placeholder='{"Secretarias":[{"n":"...","r":"...","t":"...","h":"..."}], ...}'></textarea></div>
+      <div class="row"><button class="btn" id="pasteOk">Importar</button><button class="btn ghost" id="pasteCancel">Cancelar</button></div>`);
+    $('#pasteOk').onclick = () => importDir($('#pasteJson').value);
+    $('#pasteCancel').onclick = closeModal;
+  };
+}
+function contactHTML(sec, c, i) {
+  const tel = (c.t || '').replace(/[^\d+]/g, '');
+  return `<div class="contact">
+    <div class="info"><b>${esc(c.n) || '<span class="ph">[nombre]</span>'}</b>
+      <span>${esc(c.r) || '[rol / unidad]'}</span>
+      <span>${esc(c.t) || '[teléfono / anexo]'}${c.h ? ' · ' + esc(c.h) : ''}</span></div>
+    <div class="acts">
+      ${tel.length >= 4 ? `<a class="btn" href="tel:${esc(tel)}">Llamar</a>` : ''}
+      <button class="btn ghost" data-sec="${esc(sec)}" data-edit="${i}">Editar</button>
+    </div></div>`;
+}
+function editContact(sec, i) {
+  const d = dirData(); const c = i >= 0 ? d[sec][i] : { n: '', r: '', t: '', h: '' };
+  openModal(`<h2>${i >= 0 ? 'Editar' : 'Nuevo'} contacto · ${esc(sec)}</h2>
+    <div class="field"><label>Nombre</label><input type="text" id="cN" value="${esc(c.n)}" placeholder="[completar]"></div>
+    <div class="field"><label>Rol / unidad</label><input type="text" id="cR" value="${esc(c.r)}" placeholder="[completar]"></div>
+    <div class="field"><label>Teléfono / anexo</label><input type="tel" id="cT" value="${esc(c.t)}" placeholder="[completar]"></div>
+    <div class="field"><label>Horario</label><input type="text" id="cH" value="${esc(c.h)}" placeholder="[completar]"></div>
+    <div class="row"><button class="btn" id="cSave">Guardar</button><button class="btn ghost" id="cCancel">Cancelar</button></div>
+    ${i >= 0 ? '<div class="row" style="margin-top:8px"><button class="btn danger" id="cDel">Eliminar</button></div>' : ''}`);
+  $('#cSave').onclick = () => {
+    const nc = { n: $('#cN').value.trim(), r: $('#cR').value.trim(), t: $('#cT').value.trim(), h: $('#cH').value.trim() };
+    if (!nc.n && !nc.t) { toast('Ingrese al menos nombre o teléfono'); return; }
+    if (i >= 0) d[sec][i] = nc; else d[sec].push(nc);
+    store.set('dir', d); closeModal(); renderDir(); toast('Guardado');
+  };
+  $('#cCancel').onclick = closeModal;
+  if (i >= 0) $('#cDel').onclick = () => { if (confirm('¿Eliminar contacto?')) { d[sec].splice(i, 1); store.set('dir', d); closeModal(); renderDir(); } };
+}
+function exportDir() {
+  const json = JSON.stringify(dirData(), null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'directorio_geriatria_uc.json'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  if (navigator.clipboard) navigator.clipboard.writeText(json).then(() => toast('JSON descargado y copiado al portapapeles'), () => toast('JSON descargado'));
+  else toast('JSON descargado');
+}
+function importDir(text) {
+  try {
+    const obj = JSON.parse(text);
+    if (typeof obj !== 'object' || Array.isArray(obj)) throw new Error('formato');
+    const d = dirData(); let n = 0;
+    Object.keys(obj).forEach(sec => {
+      if (!DIR_SECTIONS.includes(sec) || !Array.isArray(obj[sec])) return;
+      d[sec] = obj[sec].map(c => ({ n: String(c.n || ''), r: String(c.r || ''), t: String(c.t || ''), h: String(c.h || '') })); n += d[sec].length;
+    });
+    store.set('dir', d); closeModal(); renderDir(); toast(`Importados ${n} contactos`);
+  } catch (e) { toast('JSON inválido'); }
+}
+
+/* ========================= [JS-4] Recursos ========================= */
+const RESOURCES = [
+  { n: 'FRAX® Chile', d: 'Riesgo de fractura a 10 años (Univ. Sheffield)', u: 'https://frax.shef.ac.uk/FRAX/tool.aspx?country=61' },
+  { n: 'MINSAL · Guías clínicas GES', d: 'Ministerio de Salud de Chile: guías GES y adulto mayor', u: 'https://www.minsal.cl' },
+  { n: 'SOCGER', d: 'Sociedad de Geriatría y Gerontología de Chile', u: 'https://www.socger.cl' },
+  { n: 'Criterios de Beers (AGS 2023)', d: 'Medicamentos potencialmente inapropiados en adultos mayores', u: 'https://agsjournals.onlinelibrary.wiley.com/doi/10.1111/jgs.18372' },
+  { n: 'STOPP/START v3 (2023)', d: 'Criterios de prescripción inapropiada y omisiones', u: 'https://link.springer.com/article/10.1007/s41999-023-00777-y' }
+];
+function renderRec() {
+  const own = store.get('links', []);
+  const v = $('#view-mas');
+  v.innerHTML = `
+    <h2 style="font-size:16px;color:var(--uc);margin:4px 0 8px">Referencias</h2>
+    ${RESOURCES.map(r => `<a class="link" target="_blank" rel="noopener" href="${esc(r.u)}"><div><b>${esc(r.n)}</b><span>${esc(r.d)}</span></div></a>`).join('')}
+    <h2 style="font-size:16px;color:var(--uc);margin:18px 0 8px">Enlaces del servicio <span class="muted" style="font-weight:400;font-size:13px">(propios, se guardan en este celular)</span></h2>
+    ${own.length ? own.map((r, i) => `<a class="link" target="_blank" rel="noopener" href="${esc(r.u)}"><div><b>${esc(r.n)}</b><span>${esc(r.u)}</span></div><button class="del" data-del="${i}" aria-label="Eliminar">×</button></a>`).join('') : '<div class="empty">Sin enlaces propios. Ej.: protocolos internos, carpeta Drive del servicio, formularios.</div>'}
+    <div class="card" style="margin-top:12px">
+      <h2>Agregar enlace</h2>
+      <div class="field"><label>Título</label><input type="text" id="lkN" placeholder="ej. Protocolo delirium SCA"></div>
+      <div class="field"><label>URL</label><input type="text" id="lkU" inputmode="url" placeholder="https://…"></div>
+      <button class="btn block" id="lkAdd">Guardar enlace</button>
+    </div>`;
+  $('#lkAdd').onclick = () => {
+    const n = $('#lkN').value.trim(); let u = $('#lkU').value.trim();
+    if (!n || !u) { toast('Complete título y URL'); return; }
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    own.push({ n, u }); store.set('links', own); renderRec(); toast('Enlace guardado');
+  };
+  v.onclick = e => {
+    const b = e.target.closest('[data-del]');
+    if (b) { e.preventDefault(); own.splice(+b.dataset.del, 1); store.set('links', own); renderRec(); }
+  };
+}
+
+/* ========================= [JS-6] Plantillas ========================= */
+/* Cada plantilla = secciones con campos. Tipos: text, area, chk (casillas → lista en el texto), sel.
+   Los borradores se guardan SOLO en sessionStorage (se pierden al cerrar el navegador): no dejar datos de pacientes en el celular. */
+const SD_GERIATRICOS = ['Delirium', 'Deterioro cognitivo / demencia', 'Depresión', 'Caídas', 'Inmovilidad', 'Fragilidad', 'Sarcopenia', 'Malnutrición', 'Disfagia', 'Incontinencia urinaria', 'Incontinencia fecal', 'Constipación', 'UPP / lesión por presión', 'Polifarmacia', 'Dolor crónico', 'Insomnio', 'Déficit sensorial (visión/audición)', 'Sobrecarga del cuidador', 'Riesgo social'];
+const DOMINIOS = ['Clínico', 'Mental / cognitivo-afectivo', 'Funcional', 'Nutricional', 'Social'];
+
+const TPLS = [
+  {
+    id: 'hgg', abbr: 'HGG', name: 'Ingreso / Evaluación geriátrica (formato HGG)', desc: 'VGI de ingreso y trabajo final de rotación. 12 secciones.',
+    note: 'Formato del Dr. Hugo González (HGG). Sirve también para la VGI final (entregar a más tardar el miércoles de la última semana).',
+    sections: [
+      { h: 'IDENTIFICACIÓN', f: [['edad', 'Edad / sexo', 'text'], ['cama', 'Cama / unidad / fecha de ingreso', 'text'], ['previs', 'Previsión · procedencia (domicilio / ELEAM / otro) · con quién vive', 'text'], ['inform', 'Informante (parentesco) · cuidador principal', 'text']] },
+      { h: 'MOTIVO DE CONSULTA / INGRESO', f: [['motivo', 'Motivo y tiempo de evolución', 'area']] },
+      { h: 'ANTECEDENTES', f: [['morb', 'Mórbidos', 'area'], ['qx', 'Quirúrgicos', 'text'], ['alerg', 'Alergias (NAMC si no tiene)', 'text'], ['habit', 'Hábitos (tabaco, OH, actividad física)', 'text'], ['func_basal', 'Situación funcional basal (ABVD / AIVD / marcha, ayudas técnicas)', 'area'], ['cog_basal', 'Situación cognitiva basal', 'text'], ['soc', 'Antecedentes sociales (vivienda, red, cuidador, previsión)', 'area'], ['hosp', 'Hospitalizaciones recientes / caídas último año', 'text']] },
+      { h: 'EVOLUCIÓN', f: [['evol', 'Historia de la enfermedad actual y evolución', 'area'], ['ex', 'Examen físico (signos vitales, hallazgos relevantes)', 'area'], ['caidas', 'Riesgo de caídas (Morse / Downton, marcha, Get Up & Go)', 'text'], ['upp', 'Riesgo de UPP (Braden) y estado de la piel', 'text']] },
+      { h: 'LABORATORIO', f: [['lab', 'Resultados relevantes (hemograma, ELP, función renal, PCR, albúmina, B12/TSH, otros)', 'area'], ['lab_int', 'Interpretación', 'area']] },
+      { h: 'IMÁGENES / NEUROCOGNITIVO', f: [['img', 'Imágenes (TAC, RM, Rx, eco) y hallazgos', 'area'], ['neurocog', 'Evaluación neurocognitiva (MoCA / Mini-Cog / MMSE, CAM/4AT, GDS-FAST)', 'area']] },
+      { h: 'NUTRICIÓN Y DEGLUCIÓN', f: [['nut', 'Estado nutricional (peso, IMC, MNA-SF, pérdida de peso, albúmina)', 'area'], ['iddsi', 'Deglución y nivel IDDSI indicado', 'sel', ['[no evaluado]', 'Sin disfagia — régimen común (IDDSI 7) / líquidos finos (0)', 'Sólidos 7 fácil de masticar', 'Sólidos 6 suave y tamaño bocado', 'Sólidos 5 picado y húmedo', 'Sólidos 4 puré', 'Sólidos 3 licuado', 'Líquidos 1 ligeramente espeso', 'Líquidos 2 poco espeso', 'Líquidos 3 moderadamente espeso', 'Líquidos 4 extremadamente espeso', 'Régimen cero / vía alternativa']], ['deglu', 'Detalle (evaluación fonoaudiológica, prueba de agua, EAT-10, postura, supervisión)', 'text']] },
+      { h: 'DIAGNÓSTICOS', f: [['dx', 'Diagnósticos (clínicos, por orden de relevancia)', 'area'], ['sdg', 'Síndromes geriátricos presentes', 'chk', SD_GERIATRICOS]] },
+      { h: 'MEDICACIÓN VIGENTE', f: [['med', 'Fármacos actuales (nombre, dosis, frecuencia) y conciliación con domicilio', 'area'], ['medrev', 'Fármacos potencialmente inapropiados (Beers / STOPP) y carga anticolinérgica (ACB)', 'text']] },
+      { h: 'VALORACIÓN GERIÁTRICA Y SUGERENCIAS POR DOMINIO', f: [['d_clin', 'Clínico — evaluación y sugerencias', 'area'], ['d_mental', 'Mental (cognitivo / afectivo / delirium) — evaluación y sugerencias', 'area'], ['d_func', 'Funcional (ABVD Barthel/Katz, AIVD Lawton, marcha, SPPB, CFS) — evaluación y sugerencias', 'area'], ['d_nut', 'Nutricional — evaluación y sugerencias', 'area'], ['d_soc', 'Social (red, cuidador, Zarit, destino al alta) — evaluación y sugerencias', 'area']] },
+      { h: 'ALERTAS', f: [['alert', 'Alertas (riesgo de delirium, caídas, aspiración, LET / directivas anticipadas, alergias, aislamiento)', 'area']] },
+      { h: 'PENDIENTES', f: [['pend', 'Exámenes, interconsultas, conversaciones con familia, plan de alta', 'area']] }
+    ]
+  },
+  {
+    id: 'entrega', abbr: 'ET', name: 'Entrega de turno Sala UC / UGA', desc: 'Una ficha por paciente, columnas de la planilla del servicio.',
+    note: 'Mismas columnas que la planilla de entrega: CAMA · DATOS · ANTECEDENTES · FÁRMACOS · SD. GERIÁTRICOS · DIAGNÓSTICO (4 ejes) · EXÁMENES · PLAN. No incluir nombre ni RUT en el texto que se copia a lugares no seguros.',
+    sections: [
+      { h: 'CAMA', f: [['cama', 'Cama / unidad', 'text']] },
+      { h: 'DATOS', f: [['datos', 'Edad, sexo, fecha de ingreso, días de hospitalización, procedencia', 'text']] },
+      { h: 'ANTECEDENTES', f: [['ant', 'Mórbidos relevantes, funcionalidad y cognición basal', 'area']] },
+      { h: 'FÁRMACOS', f: [['farm', 'Fármacos actuales relevantes (ATB con día de tratamiento, anticoagulación, psicofármacos, etc.)', 'area']] },
+      { h: 'SD. GERIÁTRICOS', f: [['sdg', 'Síndromes geriátricos', 'chk', SD_GERIATRICOS]] },
+      { h: 'DIAGNÓSTICO ACTUAL (4 ejes)', f: [['e_clin', 'Eje clínico', 'area'], ['e_mental', 'Eje mental', 'text'], ['e_func', 'Eje funcional', 'text'], ['e_soc', 'Eje social', 'text']] },
+      { h: 'EXÁMENES', f: [['exam', 'Resultados relevantes y pendientes', 'area']] },
+      { h: 'PLAN', f: [['plan', 'Plan del día / de la noche, pendientes y criterio de alta', 'area'], ['let', 'Objetivos de cuidado / LET (si definido)', 'text']] }
+    ]
+  },
+  {
+    id: 'ic', abbr: 'IC', name: 'Interconsulta a Geriatría', desc: 'Pregunta clínica específica + resumen pertinente.',
+    note: 'Máximo 2–3 líneas en el motivo. Solo la información relevante para la pregunta.',
+    sections: [
+      { h: 'INTERCONSULTA A GERIATRÍA', f: [['fecha', 'Fecha', 'text'], ['urg', 'Urgencia', 'sel', ['Electiva', 'Preferente', 'Urgente']], ['de', 'De: médico / servicio solicitante', 'text'], ['cama', 'Edad · cama / unidad', 'text'], ['dx', 'Diagnóstico principal', 'text']] },
+      { h: 'MOTIVO DE INTERCONSULTA', f: [['motivo', 'Pregunta clínica específica (p. ej. delirium hipoactivo, caídas, VGI prequirúrgica, polifarmacia, planificación de alta, LET)', 'area']] },
+      { h: 'RESUMEN CLÍNICO RELEVANTE', f: [['res', 'Evolución pertinente, funcionalidad y cognición basal, red de apoyo', 'area'], ['sdg', 'Síndromes geriátricos sospechados', 'chk', SD_GERIATRICOS]] },
+      { h: 'EXÁMENES RELEVANTES', f: [['exam', 'Exámenes adjuntos (sí / no / cuáles)', 'text']] },
+      { h: 'CONTACTO', f: [['cont', 'Interno / anexo · médico solicitante', 'text']] }
+    ]
+  },
+  {
+    id: 'evo', abbr: 'EVO', name: 'Evolución diaria', desc: 'Subjetivo · objetivo · análisis por problema · plan.',
+    note: 'Escribir la evolución completa antes de la visita. Registrar siempre: estado mental del día (CAM/4AT), movilidad, ingesta, deposiciones, dispositivos y día de ATB.',
+    sections: [
+      { h: 'EVOLUCIÓN', f: [['dia', 'Fecha · día de hospitalización · cama', 'text'], ['subj', 'Subjetivo (paciente / enfermería / familia; dolor, sueño, ánimo)', 'area'], ['sv', 'Signos vitales · balance · peso', 'text'], ['exf', 'Examen físico', 'area']] },
+      { h: 'ESTADO GERIÁTRICO DEL DÍA', f: [['mental', 'Estado mental (CAM / 4AT, nivel de alerta, conducta)', 'text'], ['movil', 'Movilidad (deambuló, silla, cama; caídas)', 'text'], ['ingesta', 'Ingesta oral / nivel IDDSI / hidratación', 'text'], ['elim', 'Diuresis · deposiciones (última) · sonda / pañal', 'text'], ['disp', 'Dispositivos (VVP, SU, O2, contención) y día de ATB', 'text'], ['piel', 'Piel / UPP', 'text']] },
+      { h: 'EXÁMENES', f: [['lab', 'Laboratorio / imágenes del día e interpretación', 'area']] },
+      { h: 'ANÁLISIS POR PROBLEMA', f: [['anal', 'Problema 1 … n: situación y evaluación', 'area']] },
+      { h: 'PLAN', f: [['plan', 'Indicaciones, cambios de fármacos, interconsultas, conversación con familia', 'area'], ['alta', 'Criterios de alta / destino / pendientes', 'text']] }
+    ]
+  }
+];
+
+function tplKey(id) { return 'tpl:' + id; }
+
+function renderPlantMenu() {
+  setHeader(TABS.plant.title, TABS.plant.sub, null);
+  $('#view-plant').innerHTML = `<div class="list">${TPLS.map(t => `
+    <button class="item" data-id="${t.id}"><div class="ic">${t.abbr}</div><div class="t"><b>${t.name}</b><span>${t.desc}</span></div><div class="chev">›</div></button>`).join('')}</div>
+    <div class="note" style="margin-top:14px"><b>Privacidad:</b> los borradores se guardan solo mientras el navegador esté abierto y se borran al cerrarlo. No escriba nombre ni RUT; el texto copiado se pega en TrakCare y se completa allá.</div>`;
+  $('#view-plant').onclick = e => { const b = e.target.closest('.item'); if (b) openTpl(b.dataset.id); };
+  window.scrollTo(0, 0);
+}
+
+function openTpl(id) {
+  const t = TPLS.find(x => x.id === id); if (!t) return;
+  setHeader(t.name, t.desc, renderPlantMenu);
+  const d = sess.get(tplKey(id), {});
+  const fieldHTML = (f) => {
+    const [k, label, type, opts] = f; const v = d[k];
+    if (type === 'area') return `<div class="field"><label>${esc(label)}</label><textarea name="${k}">${esc(v || '')}</textarea></div>`;
+    if (type === 'sel') return `<div class="field"><label>${esc(label)}</label><select name="${k}">${opts.map(o => `<option${v === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+    if (type === 'chk') return `<div class="field"><label>${esc(label)}</label><div class="chk">${opts.map(o => `<label><input type="checkbox" name="${k}" value="${esc(o)}"${(v || []).includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}</div></div>`;
+    return `<div class="field"><label>${esc(label)}</label><input type="text" name="${k}" value="${esc(v || '')}"></div>`;
+  };
+  $('#view-plant').innerHTML = `<div class="tpl" id="tplForm">
+    ${t.note ? `<div class="note">${t.note}</div>` : ''}
+    ${t.sections.map(s => `<div class="card"><h3>${esc(s.h)}</h3>${s.f.map(fieldHTML).join('')}</div>`).join('')}
+    <div class="sticky-actions row"><button class="btn" id="tplCopy">Copiar texto</button><button class="btn secondary" id="tplPrev">Vista previa</button><button class="btn ghost" id="tplClr">Limpiar</button></div>
+  </div>`;
+  $('#view-plant').onclick = null;
+  const root = $('#tplForm');
+  const read = () => {
+    const out = {};
+    t.sections.forEach(s => s.f.forEach(f => {
+      const [k, , type] = f;
+      if (type === 'chk') out[k] = $$(`input[name="${k}"]:checked`, root).map(x => x.value);
+      else out[k] = ($(`[name="${k}"]`, root).value || '').trim();
+    }));
+    return out;
+  };
+  root.addEventListener('input', () => sess.set(tplKey(id), read()));
+  root.addEventListener('change', () => sess.set(tplKey(id), read()));
+  const build = () => {
+    const v = read(); const lines = [t.name.toUpperCase(), ''];
+    t.sections.forEach(s => {
+      const body = [];
+      s.f.forEach(f => {
+        const [k, label, type] = f; const val = v[k];
+        const short = label.split(' (')[0].split(' — ')[0];
+        if (type === 'chk') { if (val.length) body.push(short + ': ' + val.join(', ')); }
+        else if (val && !/^\[no evaluado\]$/.test(val)) body.push((type === 'area' && val.includes('\n')) ? short + ':\n' + val : short + ': ' + val);
+      });
+      lines.push('== ' + s.h + ' ==');
+      lines.push(body.length ? body.join('\n') : '[ ]');
+      lines.push('');
+    });
+    return lines.join('\n').trim();
+  };
+  $('#tplCopy').onclick = () => copyText(build(), 'Texto copiado: pegar en TrakCare');
+  $('#tplPrev').onclick = () => previewCopy(t.name, build());
+  $('#tplClr').onclick = () => { if (confirm('¿Borrar todos los campos de esta plantilla?')) { sess.del(tplKey(id)); openTpl(id); } };
+  window.scrollTo(0, 0);
+}
+
+/* ========================= [JS-7] Más: Checklists, Glosario, Pauta, Calendario, Recursos ========================= */
+const CHECKLISTS = [
+  { id: 'delirium', name: 'Medidas no farmacológicas antidelirium', desc: 'Prevención y manejo (HELP / NICE)', items: [
+    'Orientación: reloj y calendario visibles, presentarse en cada contacto, explicar dónde está y por qué',
+    'Lentes y audífonos puestos y funcionando; prótesis dental',
+    'Familiar / acompañante conocido, objetos personales, fotos',
+    'Luz natural de día, luz baja de noche; evitar ruido nocturno y procedimientos de madrugada',
+    'Higiene del sueño: no despertar para signos vitales si es estable, leche tibia / música, evitar hipnóticos',
+    'Movilización precoz: sentar en sillón, caminar con ayuda ≥ 2 veces/día; evitar contención física',
+    'Hidratación y nutrición supervisadas; registrar ingesta',
+    'Retirar lo antes posible sonda urinaria, VVP innecesarias, O2 si no se requiere, monitores',
+    'Dolor evaluado y tratado (escala conductual si no comunica)',
+    'Deposiciones: evitar constipación / fecaloma; retención urinaria (bladder scan)',
+    'Revisión diaria de fármacos: benzodiacepinas, anticolinérgicos (ACB), opioides, corticoides',
+    'Buscar y tratar causas: infección, hipoxia, alteración ELP/glicemia, abstinencia, retención, fármacos',
+    'Evaluar con CAM / 4AT cada turno; explicar a la familia qué es delirium y cómo ayudar',
+    'Antipsicótico solo si hay agitación con riesgo para sí mismo u otros, a dosis mínima y por el menor tiempo'
+  ] },
+  { id: 'caidas', name: 'Prevención de caídas (hospitalizado)', desc: 'Intervención multifactorial', items: [
+    'Riesgo evaluado al ingreso (Morse / Downton) y reevaluado ante cambio clínico o traslado',
+    'Cama en posición baja, frenos puestos, timbre y objetos al alcance; luz nocturna',
+    'Barandas según evaluación (no como contención); evitar contención física',
+    'Calzado cerrado antideslizante; bastón / andador propio a mano',
+    'Lentes y audífonos puestos',
+    'Acompañar a baño / ducha; horario de micción programado; evitar urgencia miccional',
+    'Hipotensión ortostática medida (PA acostado / de pie 1 y 3 min); levantar en etapas',
+    'Revisar psicofármacos, hipotensores, hipoglicemiantes, anticolinérgicos; desprescribir',
+    'Movilización y ejercicio diarios (kinesiología); evitar reposo absoluto',
+    'Delirium detectado y manejado (ver Checklist antidelirium)',
+    'Vitamina D / calcio y osteoporosis evaluadas (riesgo de fractura, FRAX)',
+    'Educación a paciente y familia; registrar caídas con circunstancias'
+  ] },
+  { id: 'upp', name: 'Prevención de UPP / lesiones por presión', desc: 'Según riesgo de Braden', items: [
+    'Braden al ingreso y cada 48–72 h; inspección diaria de la piel (sacro, talones, trocánteres, occipucio)',
+    'Cambios de posición cada 2 h en cama (30° lateral) y cada 1 h en silla; registrar',
+    'Superficie de redistribución de presión (colchón antiescaras) si riesgo alto',
+    'Talones en descarga (almohada bajo pantorrillas); evitar rosquillas',
+    'Cabecera ≤ 30° salvo indicación (aspiración); evitar fricción y cizallamiento al movilizar (sábana de deslizamiento)',
+    'Piel limpia y seca; manejo de incontinencia; crema barrera; no masajear prominencias',
+    'Nutrición: proteínas 1,2–1,5 g/kg/día, hidratación, suplementos si MNA-SF alterado',
+    'Dispositivos (O2, sondas, férulas) protegidos y rotados',
+    'Movilización precoz y sedestación progresiva',
+    'Lesión existente: clasificar (categoría I–IV), medir, fotografiar según protocolo, curación avanzada y manejo del dolor'
+  ] },
+  { id: 'asp', name: 'Prevención de aspiración / disfagia (IDDSI)', desc: 'Alimentación segura', items: [
+    'Tamizaje de disfagia antes de la primera ingesta oral (prueba de agua / EAT-10 / observación)',
+    'Evaluación fonoaudiológica y definición de nivel IDDSI de sólidos (3–7) y líquidos (0–4) registrada e indicada',
+    'Alimentar sentado a 90°, cabeza en ligera flexión; mantener sentado 30 min después',
+    'Paciente alerta y sin delirium hiperactivo al momento de comer; no alimentar somnoliento',
+    'Bocados pequeños, ritmo lento, sin distracciones; supervisión si riesgo',
+    'Higiene oral después de cada comida (reduce neumonía aspirativa); prótesis dental ajustada',
+    'Fármacos: evaluar forma farmacéutica (triturables, líquidos); evitar sedantes',
+    'Sin sonda nasogástrica de rutina en demencia avanzada: alimentación cuidadosa a mano (confort)',
+    'Signos de alarma: tos con la ingesta, voz húmeda, fiebre, desaturación → suspender vía oral y reevaluar',
+    'Educación a familia / cuidador y plan al alta (textura, espesante, posición)'
+  ] },
+  { id: 'despres', name: 'Desprescripción (STOPP/START y Beers resumidos)', desc: 'Revisión de fármacos en cada ingreso y alta', items: [
+    'Conciliación completa: lo que toma realmente (incl. OTC, hierbas, gotas) vs indicado',
+    'Cada fármaco con indicación vigente; suspender duplicados y los "sin indicación"',
+    'Benzodiacepinas y Z (zopiclona): caídas, delirium → retiro gradual (STOPP / Beers)',
+    'Anticolinérgicos (antihistamínicos de 1ª generación, antiespasmódicos, tricíclicos, oxibutinina): calcular ACB (Calculadoras) y sustituir',
+    'Antipsicóticos en demencia solo si síntomas con riesgo; reevaluar retiro cada 3 meses',
+    'IBP > 8 semanas sin indicación clara → bajar dosis / suspender',
+    'AINE: evitar en ERC, IC, anticoagulados, antecedente de úlcera; preferir paracetamol / tópicos',
+    'Sulfonilureas de acción larga (glibenclamida) e insulina en escala móvil → evitar; meta HbA1c según fragilidad (7,5–8,5%)',
+    'Hipotensores: hipotensión ortostática, PAS < 130 en frágil con caídas → reducir; alfa-bloqueadores centrales evitar',
+    'Opioides: constipación (laxante siempre), delirium; evitar tramadol + ISRS, petidina',
+    'Anticoagulación en FA: no omitir solo por edad o caídas (START); ajustar dosis a función renal y peso',
+    'START: estatina en ECV establecida (según expectativa de vida), IECA en IC, vitamina D / antirresortivo en osteoporosis o fractura, antidepresivo en depresión moderada-severa, laxante con opioides, inhibidor ACE / vacunas',
+    'Fármacos a ajustar por VFG (CKD-EPI / Cockcroft-Gault): metformina, DOAC, gabapentina, antibióticos, digoxina',
+    'Priorizar según objetivos de cuidado y tiempo-hasta-beneficio; retirar de a uno, explicar al paciente y dejar escrito en epicrisis'
+  ] }
+];
+
+const GLOSARIO = [
+  ['UGA', 'Unidad Geriátrica de Agudos (Hospital Clínico San Carlos de Apoquindo). Hospitalización de agudos con manejo geriátrico; puesto fijo semanal del rotante, inicio 08:30.'],
+  ['Sala UC', 'Pacientes hospitalizados a cargo del equipo de Geriatría en el Hospital Clínico. Un solo rotante por día; entrega de turno con planilla por paciente (cama, datos, antecedentes, fármacos, sd. geriátricos, dx, exámenes, plan).'],
+  ['UC en Casa', 'Programa de hospitalización domiciliaria UC CHRISTUS: atención hospitalaria en el domicilio para pacientes seleccionados (alternativa a la hospitalización convencional o alta precoz).'],
+  ['Domicilio Dr. Gac', 'Visitas domiciliarias geriátricas del Dr. Gac (lunes y martes PM); las cubre el rotante que está en UGA esa semana.'],
+  ['Poli becados SJ', 'Policlínico docente de becados en el Centro Médico San Joaquín, martes y miércoles 14:00; admite varios rotantes.'],
+  ['Reunión académica', 'Martes 08:00 por Zoom, asisten todos los rotantes.'],
+  ['Reunión 5° piso', 'Jueves 14:00 en el 5° piso del Edificio Académico (5A); asisten todos.'],
+  ['Tarde académica', 'Miércoles PM: bloque libre para actividades académicas de los becados de Medicina Interna.'],
+  ['VGI', 'Valoración Geriátrica Integral: evaluación multidimensional (clínica, mental, funcional, nutricional, social) con escalas estandarizadas. Es también el trabajo final de la rotación (plazo: miércoles de la última semana).'],
+  ['HGG', 'Formato de ingreso / evaluación geriátrica del Dr. Hugo González: identificación → motivo → antecedentes → evolución → laboratorio → imágenes/neurocog → nutrición y deglución → diagnósticos → medicación → valoración por dominio con sugerencias → alertas → pendientes. Ver Plantillas.'],
+  ['Dx en 4 ejes', 'Diagnóstico geriátrico en ejes clínico, mental, funcional y social (se usa en la entrega de turno).'],
+  ['ABVD / AIVD', 'Actividades básicas de la vida diaria (Barthel, Katz: comer, vestirse, baño, continencia, traslado, deambular) / instrumentales (Lawton: teléfono, compras, comida, casa, lavado, transporte, fármacos, dinero).'],
+  ['CFS', 'Clinical Frailty Scale (Rockwood, 1–9): grado de fragilidad basado en función y comorbilidad 2 semanas antes de la enfermedad aguda.'],
+  ['FI', 'Índice de fragilidad (Frailty Index): proporción de déficits acumulados (≥ 30 variables). > 0,25 sugiere fragilidad.'],
+  ['LET', 'Limitación del esfuerzo terapéutico / adecuación de medidas: decisión documentada de no iniciar o retirar medidas desproporcionadas según pronóstico y voluntad del paciente. Registrar en ficha y comunicar en la entrega.'],
+  ['PIM', 'Potentially Inappropriate Medication: fármaco potencialmente inapropiado en el adulto mayor (criterios de Beers, STOPP).'],
+  ['STOPP/START', 'Criterios europeos de prescripción inapropiada (STOPP) y de omisión de fármacos indicados (START), versión 3 (2023).'],
+  ['ACB', 'Anticholinergic Cognitive Burden: suma de la carga anticolinérgica de los fármacos (1–3 c/u); ≥ 3 se asocia a deterioro cognitivo, delirium y caídas.'],
+  ['IDDSI', 'International Dysphagia Diet Standardisation Initiative. Líquidos: 0 fino · 1 ligeramente espeso · 2 poco espeso · 3 moderadamente espeso · 4 extremadamente espeso. Sólidos: 3 licuado · 4 puré · 5 picado y húmedo · 6 suave y tamaño bocado · 7 fácil de masticar / regular.'],
+  ['CAM / 4AT', 'Confusion Assessment Method y 4AT: herramientas de detección de delirium (inicio agudo y fluctuante + inatención + pensamiento desorganizado o alteración de conciencia).'],
+  ['GDS-FAST', 'Global Deterioration Scale / Functional Assessment Staging de Reisberg (1–7, subetapas 6a–7f) para estadificar la demencia.'],
+  ['UPP', 'Úlcera / lesión por presión. Categorías I–IV, no clasificable y lesión de tejido profundo. Riesgo: escala de Braden.'],
+  ['ELEAM', 'Establecimiento de Larga Estadía para Adultos Mayores (residencia).'],
+  ['ELP', 'Electrolitos plasmáticos (Na, K, Cl). Abreviatura habitual en labs UC.'],
+  ['Labs frecuentes', 'HMG hemograma · PCR proteína C reactiva · BUN/Crea · ELP · GSV/GSA gases venosos/arteriales · PBQ perfil bioquímico · PH perfil hepático · PL perfil lipídico · OC/UC orina completa / urocultivo · HC hemocultivos · TSH · B12 · 25-OH vit D · HbA1c · Alb albúmina.'],
+  ['Abreviaturas clínicas UC', 'PA, FC, FR, SatO₂, AA (aire ambiente), VVP, CVC, SU/SV sonda urinaria, SNG, VNI, TVP/TEP, IC insuficiencia cardíaca, IAM/SCA, IRA/ERC, NAMC (no alergias medicamentosas conocidas), EEII, BH balance hídrico, ATB, HDA, ITU.'],
+  ['Morse / Downton', 'Escalas de riesgo de caídas en hospitalizados (Morse ≥ 45 alto riesgo; Downton ≥ 3 alto riesgo).'],
+  ['Zarit', 'Escala de sobrecarga del cuidador (22 ítems; versión abreviada chilena de 7 ítems, corte ≥ 17).'],
+  ['TrakCare', 'Ficha clínica electrónica UC CHRISTUS donde se registra ingreso, evoluciones, indicaciones e interconsultas.'],
+  ['Medint / MedFam / GerUC / PsiEnlace / Fellow', 'Tipos de rotante: becados de Medicina Interna, Medicina Familiar, Geriatría UC, Psiquiatría de enlace y fellows de cognición / Neurocog. Ver Rotación → Reglas por tipo de rotante.']
+];
+
+const PAUTA_DEFAULT = [
+  'Valoración geriátrica integral (VGI de ingreso y trabajo final)', 'Razonamiento clínico y diagnóstico en 4 ejes', 'Manejo de síndromes geriátricos (delirium, caídas, fragilidad, polifarmacia)',
+  'Evolución diaria y registro en TrakCare', 'Entrega de turno y comunicación con el equipo', 'Comunicación con paciente y familia (objetivos de cuidado, LET)',
+  'Conciliación y desprescripción de fármacos', 'Asistencia, puntualidad y responsabilidad', 'Actitud, trabajo en equipo y respeto', 'Autoaprendizaje y presentación de casos / seminarios'
+];
+
+function renderMas(sub) {
+  const v = $('#view-mas');
+  if (!sub) {
+    setHeader(TABS.mas.title, TABS.mas.sub, null);
+    const items = [
+      ['check', 'CK', 'Checklists', 'Antidelirium · caídas · UPP · aspiración · desprescripción'],
+      ['glos', 'GL', 'Glosario UC', 'UGA, Sala UC, UC en Casa, LET, IDDSI, HGG…'],
+      ['pauta', 'PE', 'Pauta de evaluación', 'En construcción — borrador editable'],
+      ['cal', 'CA', 'Calendario de rotantes', 'Se publica cada semana — pegar link'],
+      ['rec', 'RF', 'Recursos', 'Referencias y enlaces del servicio']
+    ];
+    v.innerHTML = `<div class="list">${items.map(i => `<button class="item" data-sub="${i[0]}"><div class="ic">${i[1]}</div><div class="t"><b>${i[2]}</b><span>${i[3]}</span></div><div class="chev">›</div></button>`).join('')}</div>`;
+    v.onclick = e => { const b = e.target.closest('[data-sub]'); if (b) renderMas(b.dataset.sub); };
+    window.scrollTo(0, 0); return;
+  }
+  v.onclick = null;
+  const back = () => renderMas();
+  if (sub === 'check') {
+    setHeader('Checklists', 'Marcar lo hecho y copiar al registro', back);
+    v.innerHTML = CHECKLISTS.map(c => `<details class="card" data-ck="${c.id}"><summary><b>${c.name}</b> <span class="muted">· ${c.desc}</span></summary>
+      <div class="opt" style="margin-top:8px">${c.items.map((it, i) => `<label><input type="checkbox" value="${i}"><span>${it}</span></label>`).join('')}</div>
+      <div class="row" style="margin-top:10px"><button class="btn sm" data-ckcopy="${c.id}">Copiar</button><button class="btn ghost sm" data-ckclr="${c.id}">Desmarcar</button></div></details>`).join('') +
+      `<p class="muted" style="margin-top:12px">Las casillas no se guardan (uso por paciente). El texto copiado lista lo marcado como "[x]" y lo no marcado como "[ ]".</p>`;
+    v.onclick = e => {
+      const bc = e.target.closest('[data-ckcopy]'), bx = e.target.closest('[data-ckclr]');
+      if (bc) {
+        const c = CHECKLISTS.find(x => x.id === bc.dataset.ckcopy); const det = bc.closest('details');
+        const boxes = $$('input[type=checkbox]', det);
+        const txt = c.name.toUpperCase() + '\n' + c.items.map((it, i) => (boxes[i].checked ? '[x] ' : '[ ] ') + it).join('\n');
+        copyText(txt);
+      }
+      if (bx) $$('input[type=checkbox]', bx.closest('details')).forEach(x => x.checked = false);
+    };
+  } else if (sub === 'glos') {
+    setHeader('Glosario UC', 'Términos y abreviaturas de uso local', back);
+    v.innerHTML = `<input class="search" type="search" id="glQ" placeholder="Buscar término…" autocomplete="off"><div class="card gl"><dl id="glList">${GLOSARIO.map(g => `<div data-n="${esc((g[0] + ' ' + g[1]).toLowerCase())}"><dt>${esc(g[0])}</dt><dd>${esc(g[1])}</dd></div>`).join('')}</dl></div>`;
+    $('#glQ').oninput = e => { const t = e.target.value.trim().toLowerCase(); $$('#glList > div').forEach(d => d.style.display = !t || d.dataset.n.includes(t) ? '' : 'none'); };
+  } else if (sub === 'pauta') {
+    setHeader('Pauta de evaluación', 'Espacio reservado', back);
+    const data = store.get('pauta', null) || PAUTA_DEFAULT.map(c => ({ c, n: '', t: '' }));
+    v.innerHTML = `<div class="note warn"><b>En construcción — a definir con Dr. Gac / Dra. Hoyl.</b> Lo que sigue es un borrador genérico, <b>propuesta no oficial</b>, editable y guardado solo en este dispositivo. No corresponde a la pauta vigente de la Escuela de Medicina.</div>
+      <div class="card pauta" id="pautaForm"><h2>Borrador de criterios (escala 1–7)</h2>
+      ${data.map((r, i) => `<div class="crit"><input type="text" data-c="${i}" value="${esc(r.c)}" placeholder="Criterio"><select data-n="${i}"><option value="">—</option>${[1, 2, 3, 4, 5, 6, 7].map(n => `<option${String(r.n) === String(n) ? ' selected' : ''}>${n}</option>`).join('')}</select><textarea data-t="${i}" placeholder="Comentario">${esc(r.t)}</textarea></div>`).join('')}
+      <div class="row"><button class="btn secondary sm" id="pautaAdd">+ Criterio</button><button class="btn sm" id="pautaCopy">Copiar</button><button class="btn ghost sm" id="pautaReset">Restablecer</button></div>
+      <p class="muted" id="pautaAvg" style="margin-top:8px"></p></div>`;
+    const save = () => {
+      const rows = $$('.crit', v).map(d => ({ c: $('input', d).value, n: $('select', d).value, t: $('textarea', d).value }));
+      store.set('pauta', rows);
+      const ns = rows.map(r => +r.n).filter(n => n > 0);
+      $('#pautaAvg').textContent = ns.length ? `Promedio: ${(ns.reduce((a, b) => a + b, 0) / ns.length).toFixed(2)} (${ns.length} criterios evaluados de ${rows.length})` : 'Sin notas aún.';
+    };
+    $('#pautaForm').addEventListener('input', save); $('#pautaForm').addEventListener('change', save); save();
+    $('#pautaAdd').onclick = () => { const rows = store.get('pauta', []); rows.push({ c: '', n: '', t: '' }); store.set('pauta', rows); renderMas('pauta'); };
+    $('#pautaReset').onclick = () => { if (confirm('¿Restablecer el borrador de la pauta?')) { store.del('pauta'); renderMas('pauta'); } };
+    $('#pautaCopy').onclick = () => { const rows = store.get('pauta', []); copyText('PAUTA DE EVALUACIÓN (BORRADOR NO OFICIAL)\n' + rows.map(r => `${r.c}: ${r.n || '[ ]'}${r.t ? ' — ' + r.t : ''}`).join('\n')); };
+  } else if (sub === 'cal') {
+    setHeader('Calendario de rotantes', 'Se publica cada semana', back);
+    const link = store.get('calLink', '');
+    const isImg = /\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(link) || /^data:image\//i.test(link);
+    v.innerHTML = `<div class="card"><h2>Calendario semanal de rotantes</h2>
+      <p>Calendario semanal de rotantes: <b>se publica cada semana</b> (grilla con docente, sede y horario por rotante). Pegue aquí el link del Drive o de la imagen de la semana para tenerlo a mano.</p>
+      <div class="field"><label>Link (Drive / imagen)</label><input type="text" id="calUrl" inputmode="url" placeholder="https://…" value="${esc(link)}"></div>
+      <div class="row"><button class="btn" id="calSave">Guardar</button>${link ? `<a class="btn secondary" target="_blank" rel="noopener" href="${esc(link)}">Abrir</a><button class="btn ghost" id="calDel">Quitar</button>` : ''}</div>
+      ${link && isImg ? `<img class="calimg" src="${esc(link)}" alt="Calendario semanal">` : ''}
+      ${link && !isImg ? `<p class="muted" style="margin-top:8px">El link no es una imagen directa; se abre en una pestaña nueva. Si es Drive, use "Abrir".</p>` : ''}
+      <p class="muted" style="margin-top:10px">Recuerde: contactar al docente el día anterior; cambios de poli o turnos avisarlos al coordinador apenas se sepan.</p></div>`;
+    $('#calSave').onclick = () => { let u = $('#calUrl').value.trim(); if (u && !/^(https?:\/\/|data:image\/)/i.test(u)) u = 'https://' + u; store.set('calLink', u); renderMas('cal'); toast('Link guardado'); };
+    const d = $('#calDel'); if (d) d.onclick = () => { store.del('calLink'); renderMas('cal'); };
+  } else if (sub === 'rec') {
+    setHeader('Recursos', 'Referencias y enlaces propios', back);
+    renderRec();
+  }
+  window.scrollTo(0, 0);
+}
+
+/* ========================= [JS-5] Arranque ========================= */
+renderRotacion();
+renderDir();
+showTab('rotacion');
+</script>
+</body>
+</html>
