@@ -107,7 +107,7 @@ links reales de Sheet de ausencias / planilla / Saturno, apellidos de "Isi" y "M
 Lira, número de Diagonal Paraguay, horas del día tipo, hora y lugar de entrega de turno y visita, quién gestiona
 perfiles TrakCare por centro, protocolos locales.
 
-San Carlos: puerta de acceso y casilleros, lugar exacto de entrega 08:30 UGA y Sala UC, tratante de la semana,
+San Carlos: puerta de acceso y casilleros, hora y lugar de la entrega de turno UGA, tratante de la semana,
 contingencia post-aluvión (`[pendiente reapertura]`), cómo ubicar a cada miembro del equipo, a quién llamar sin SOS.
 
 ## 7. Contexto organizacional que ya está cargado (para no re-preguntar)
@@ -120,7 +120,7 @@ contingencia post-aluvión (`[pendiente reapertura]`), cómo ubicar a cada miemb
   jul–dic 2026 (tabla SUPERVISION_SJ). Regla Born 02-10: mar/mié PM nadie en Sala UC.
 - Turnos fin de semana: visita sáb-dom por 8 staff, ~1 cada 7–8 semanas, jul-2026→ene-2027 (TURNOS_FDS); traspaso
   el viernes; **no existe SOS de geriatría** en UCI/Intermedio.
-- Fijos: Zoom martes 08:00, reunión 5A jueves 14:00, Core jueves 15:00, UGA 08:30.
+- Fijos: Zoom martes 08:00, reunión 5A jueves 14:00, Core jueves 15:00, UGA visita desde 09:00, reunión multidisciplinaria UGA miércoles 08:30 (gimnasio).
 - Contingencia: aluvión San Carlos 08-10-2026 → clínica cerrada, agendas bloqueadas oct–nov, Gac/González/Marín
   reubicados, rotantes UGA → Marcoleta / HLF. Con San Carlos cerrado Hugo pasa visita mié/jue en Marcoleta.
 - Formato UC: VGI "formato HGG" 12 secciones; entrega de turno 8 columnas / 4 ejes; checklists delirium, caídas,

@@ -381,11 +381,11 @@ const ROTACION_HTML = `
 <div class="card">
   <h2>Organización de la rotación</h2>
   <h3>Equipo docente</h3>
-  <p>Jefa del Programa / Departamento: Dra. Marcela Carrasco (?) · Jefa de programa de residentes y tutora de Medicina Familiar: Dra. Trinidad Hoyl (?) · Jefe UGA San Carlos (desde 17-08-2026) y coordinador del calendario semanal de rotantes: Dr. Hugo González · Coordinadora de becados de Medicina Interna: Dra. Ingrid Danke · Sala UC Marcoleta: Dra. Marianne Born · Tutor de internos: Dr. Juan Carlos Rodríguez · Domicilio / UC en Casa: Dr. Homero Gac · Investigación: Dr. Jorge Browne · Maestro CALENDARIOS 2026: Dra. Steffy Bórquez · Secretaría: Evelyn / Celia (?).</p>
+  <p>Jefa del Programa / Departamento: Dra. Marcela Carrasco (?) · Jefa de programa de residentes y tutora de Medicina Familiar: Dra. Trinidad Hoyl (?) · Jefe UGA San Carlos y coordinador del calendario semanal de rotantes: Dr. Hugo González · Coordinadora de becados de Medicina Interna: Dra. Ingrid Danke · Sala UC Marcoleta: Dra. Marianne Born · Tutor de internos: Dr. Juan Carlos Rodríguez · Domicilio / UC en Casa: Dr. Homero Gac · Investigación: Dr. Jorge Browne · Maestro CALENDARIOS 2026: Dra. Steffy Bórquez · Secretaría: Evelyn / Celia (?).</p>
   <p><button class="btn secondary sm" onclick="goMas('equipo')">Ver equipo y organigrama completo ›</button></p>
   <p class="muted">Teléfonos y correos: <span class="ph">[completar en Directorio]</span>.</p>
   <h3>Puestos fijos de la semana</h3>
-  <p><b>Sala UC</b> (hospitalizados; 1 solo rotante por día) y <b>UGA San Carlos 08:30</b> (Unidad Geriátrica de Agudos). Son puesto fijo de la semana completa: no se cambia al rotante a mitad de semana.</p>
+  <p><b>Sala UC</b> (hospitalizados; 1 solo rotante por día) y <b>UGA San Carlos</b> (Unidad Geriátrica de Agudos; visita desde 09:00, reunión multidisciplinaria mié 08:30 en el gimnasio). Son puesto fijo de la semana completa: no se cambia al rotante a mitad de semana.</p>
   <p>Entrega de turno Sala UC: <span class="ph">[hora y lugar]</span>. Visita: <span class="ph">[hora]</span>.</p>
   <h3>Unidades y actividades por las que se rota</h3>
   <p>Sala UC · UGA San Carlos · Policlínicos docentes en centros médicos UC (ver sedes) · Poli becados San Joaquín (mar/mié 14:00) · Domicilio Dr. Gac (lun/mar PM; lo cubre quien está en UGA) · Reunión académica y reunión del 5° piso.</p>
@@ -398,11 +398,11 @@ const ROTACION_HTML = `
     <tr><th></th><th>Lunes</th><th>Martes</th><th>Miércoles</th><th>Jueves</th><th>Viernes</th></tr>
     <tr><td class="band" colspan="6">M A Ñ A N A</td></tr>
     <tr><th>AM</th>
-      <td>Sala UC<br>UGA San Carlos 08:30<br>Poli docente</td>
-      <td><span class="fx">08:00 Reunión académica (Zoom, todos)</span><br>Sala UC<br>UGA San Carlos 08:30<br>Poli docente</td>
-      <td>Sala UC<br>UGA San Carlos 08:30<br>Poli docente</td>
-      <td>Sala UC<br>UGA San Carlos 08:30<br>Poli docente (Santa Lucía en lo posible)</td>
-      <td>Sala UC<br>UGA San Carlos 08:30<br>Poli docente</td></tr>
+      <td>Sala UC<br>UGA San Carlos 09:00<br>Poli docente</td>
+      <td><span class="fx">08:00 Reunión académica (Zoom, todos)</span><br>Sala UC<br>UGA San Carlos 09:00<br>Poli docente</td>
+      <td>Sala UC<br><span class="fx">08:30 Reunión multidisciplinaria UGA (gimnasio)</span><br>UGA San Carlos 09:00<br>Poli docente</td>
+      <td>Sala UC<br>UGA San Carlos 09:00<br>Poli docente (Santa Lucía en lo posible)</td>
+      <td>Sala UC<br>UGA San Carlos 09:00<br>Poli docente</td></tr>
     <tr><td class="band" colspan="6">T A R D E</td></tr>
     <tr><th>PM</th>
       <td>Sala UC<br>Domicilio Dr. Gac<br>Poli docente</td>
@@ -459,21 +459,21 @@ const ROTACION_HTML = `
   <h2>Sedes UC CHRISTUS</h2>
   <p class="muted">Direcciones <span class="ph">[completar]</span> a confirmar por el equipo docente.</p>
   <div class="tblwrap"><table class="tbl sedes">
-    <tr><th>Sede</th><th>Comuna</th><th>Dirección</th></tr>
-    <tr><td>Clínica San Carlos de Apoquindo (UGA)</td><td>Las Condes</td><td>Camino El Alba 12351</td></tr>
-    <tr><td>Hospital Clínico UC, Marcoleta (Sala UC)</td><td>Santiago</td><td>Marcoleta 367</td></tr>
-    <tr><td>Centro Médico Santa Lucía</td><td>Santiago</td><td>Capitán Orellana 2467</td></tr>
-    <tr><td>Centro Médico Vitacura</td><td>Vitacura</td><td>Av. Vitacura 5670</td></tr>
-    <tr><td>Centro Médico El Alba</td><td>Las Condes</td><td>Camino El Alba 9500, piso 4, torre A</td></tr>
-    <tr><td>Centro Médico Escuela Militar</td><td>Las Condes</td><td>Av. Américo Vespucio 100</td></tr>
-    <tr><td>Centro Médico Irarrázaval</td><td>Ñuñoa</td><td>Irarrázaval 4949</td></tr>
-    <tr><td>Centro Médico Bilbao</td><td>Las Condes</td><td>Francisco Bilbao 4144</td></tr>
-    <tr><td>Centro Médico Alcántara</td><td>Las Condes</td><td>Alcántara 3990</td></tr>
-    <tr><td>Centro Médico San Joaquín (Poli becados)</td><td>Macul</td><td>Av. Vicuña Mackenna 4686</td></tr>
-    <tr><td>Hospital La Florida (HLF) — UGA HLF (requiere acreditación previa)</td><td>La Florida</td><td><span class="ph">[completar]</span></td></tr>
-    <tr><td>Centro Médico San Jorge</td><td><span class="ph">[completar]</span></td><td><span class="ph">[completar]</span></td></tr>
-    <tr><td>Centro Médico Lira</td><td>Santiago</td><td><span class="ph">[completar]</span></td></tr>
-    <tr><td>Edificio Académico, 5° piso (5A; a veces 3A / 6A) — reunión jueves 14:00</td><td>Santiago</td><td>Diagonal Paraguay <span class="ph">[n°]</span></td></tr>
+    <tr><th>Sede</th><th>Comuna</th><th>Dirección</th><th>Ir</th></tr>
+    <tr><td>Clínica San Carlos de Apoquindo (UGA)</td><td>Las Condes</td><td>Camino El Alba 12351</td><td style="white-space:nowrap"><a target="_blank" rel="noopener" aria-label="Google Maps" href="https://www.google.com/maps/search/?api=1&query=Camino+El+Alba+12351%2C+Las+Condes%2C+Chile">🗺️</a> <a target="_blank" rel="noopener" aria-label="Waze" href="https://waze.com/ul?q=Camino%20El%20Alba%2012351%2C%20Las%20Condes%2C%20Chile&navigate=yes">🚗</a></td></tr>
+    <tr><td>Hospital Clínico UC, Marcoleta (Sala UC)</td><td>Santiago</td><td>Marcoleta 367</td><td style="white-space:nowrap"><a target="_blank" rel="noopener" aria-label="Google Maps" href="https://www.google.com/maps/search/?api=1&query=Marcoleta+367%2C+Santiago%2C+Chile">🗺️</a> <a target="_blank" rel="noopener" aria-label="Waze" href="https://waze.com/ul?q=Marcoleta%20367%2C%20Santiago%2C%20Chile&navigate=yes">🚗</a></td></tr>
+    <tr><td>Centro Médico Santa Lucía</td><td>Santiago</td><td>Capitán Orellana 2467</td><td style="white-space:nowrap"><a target="_blank" rel="noopener" aria-label="Google Maps" href="https://www.google.com/maps/search/?api=1&query=Capit%C3%A1n+Orellana+2467%2C+Santiago%2C+Chile">🗺️</a> <a target="_blank" rel="noopener" aria-label="Waze" href="https://waze.com/ul?q=Capit%C3%A1n%20Orellana%202467%2C%20Santiago%2C%20Chile&navigate=yes">🚗</a></td></tr>
+    <tr><td>Centro Médico Vitacura</td><td>Vitacura</td><td>Av. Vitacura 5670</td><td style="white-space:nowrap"><a target="_blank" rel="noopener" aria-label="Google Maps" href="https://www.google.com/maps/search/?api=1&query=Av.+Vitacura+5670%2C+Vitacura%2C+Chile">🗺️</a> <a target="_blank" rel="noopener" aria-label="Waze" href="https://waze.com/ul?q=Av.%20Vitacura%205670%2C%20Vitacura%2C%20Chile&navigate=yes">🚗</a></td></tr>
+    <tr><td>Centro Médico El Alba</td><td>Las Condes</td><td>Camino El Alba 9500, piso 4, torre A</td><td style="white-space:nowrap"><a target="_blank" rel="noopener" aria-label="Google Maps" href="https://www.google.com/maps/search/?api=1&query=Camino+El+Alba+9500%2C+piso+4%2C+torre+A%2C+Las+Condes%2C+Chile">🗺️</a> <a target="_blank" rel="noopener" aria-label="Waze" href="https://waze.com/ul?q=Camino%20El%20Alba%209500%2C%20piso%204%2C%20torre%20A%2C%20Las%20Condes%2C%20Chile&navigate=yes">🚗</a></td></tr>
+    <tr><td>Centro Médico Escuela Militar</td><td>Las Condes</td><td>Av. Américo Vespucio 100</td><td style="white-space:nowrap"><a target="_blank" rel="noopener" aria-label="Google Maps" href="https://www.google.com/maps/search/?api=1&query=Av.+Am%C3%A9rico+Vespucio+100%2C+Las+Condes%2C+Chile">🗺️</a> <a target="_blank" rel="noopener" aria-label="Waze" href="https://waze.com/ul?q=Av.%20Am%C3%A9rico%20Vespucio%20100%2C%20Las%20Condes%2C%20Chile&navigate=yes">🚗</a></td></tr>
+    <tr><td>Centro Médico Irarrázaval</td><td>Ñuñoa</td><td>Irarrázaval 4949</td><td style="white-space:nowrap"><a target="_blank" rel="noopener" aria-label="Google Maps" href="https://www.google.com/maps/search/?api=1&query=Irarr%C3%A1zaval+4949%2C+%C3%91u%C3%B1oa%2C+Chile">🗺️</a> <a target="_blank" rel="noopener" aria-label="Waze" href="https://waze.com/ul?q=Irarr%C3%A1zaval%204949%2C%20%C3%91u%C3%B1oa%2C%20Chile&navigate=yes">🚗</a></td></tr>
+    <tr><td>Centro Médico Bilbao</td><td>Las Condes</td><td>Francisco Bilbao 4144</td><td style="white-space:nowrap"><a target="_blank" rel="noopener" aria-label="Google Maps" href="https://www.google.com/maps/search/?api=1&query=Francisco+Bilbao+4144%2C+Las+Condes%2C+Chile">🗺️</a> <a target="_blank" rel="noopener" aria-label="Waze" href="https://waze.com/ul?q=Francisco%20Bilbao%204144%2C%20Las%20Condes%2C%20Chile&navigate=yes">🚗</a></td></tr>
+    <tr><td>Centro Médico Alcántara</td><td>Las Condes</td><td>Alcántara 3990</td><td style="white-space:nowrap"><a target="_blank" rel="noopener" aria-label="Google Maps" href="https://www.google.com/maps/search/?api=1&query=Alc%C3%A1ntara+3990%2C+Las+Condes%2C+Chile">🗺️</a> <a target="_blank" rel="noopener" aria-label="Waze" href="https://waze.com/ul?q=Alc%C3%A1ntara%203990%2C%20Las%20Condes%2C%20Chile&navigate=yes">🚗</a></td></tr>
+    <tr><td>Centro Médico San Joaquín (Poli becados)</td><td>Macul</td><td>Av. Vicuña Mackenna 4686</td><td style="white-space:nowrap"><a target="_blank" rel="noopener" aria-label="Google Maps" href="https://www.google.com/maps/search/?api=1&query=Av.+Vicu%C3%B1a+Mackenna+4686%2C+Macul%2C+Chile">🗺️</a> <a target="_blank" rel="noopener" aria-label="Waze" href="https://waze.com/ul?q=Av.%20Vicu%C3%B1a%20Mackenna%204686%2C%20Macul%2C%20Chile&navigate=yes">🚗</a></td></tr>
+    <tr><td>Hospital La Florida (HLF) — UGA HLF (requiere acreditación previa)</td><td>La Florida</td><td><span class="ph">[completar]</span></td><td style="white-space:nowrap">—</td></tr>
+    <tr><td>Centro Médico San Jorge</td><td><span class="ph">[completar]</span></td><td><span class="ph">[completar]</span></td><td style="white-space:nowrap">—</td></tr>
+    <tr><td>Centro Médico Lira</td><td>Santiago</td><td><span class="ph">[completar]</span></td><td style="white-space:nowrap">—</td></tr>
+    <tr><td>Edificio Académico, 5° piso (5A; a veces 3A / 6A) — reunión jueves 14:00</td><td>Santiago</td><td>Diagonal Paraguay <span class="ph">[n°]</span></td><td style="white-space:nowrap">—</td></tr>
   </table></div>
 </div>
 
@@ -1658,7 +1658,7 @@ const CHECKLISTS = [
 ];
 
 const GLOSARIO = [
-  ['UGA', 'Unidad Geriátrica de Agudos (Clínica San Carlos de Apoquindo). Hospitalización de agudos con manejo geriátrico; puesto fijo semanal del rotante, inicio 08:30.'],
+  ['UGA', 'Unidad Geriátrica de Agudos (Clínica San Carlos de Apoquindo). Hospitalización de agudos con manejo geriátrico; puesto fijo semanal del rotante; visita desde 09:00; reunión multidisciplinaria miércoles 08:30 (gimnasio).'],
   ['Sala UC', 'Pacientes hospitalizados a cargo del equipo de Geriatría en el Hospital Clínico UC (Marcoleta). Un solo rotante por día; entrega de turno con planilla por paciente (cama, datos, antecedentes, fármacos, sd. geriátricos, dx, exámenes, plan).'],
   ['UC en Casa', 'Programa de hospitalización domiciliaria UC CHRISTUS: atención hospitalaria en el domicilio para pacientes seleccionados (alternativa a la hospitalización convencional o alta precoz).'],
   ['Domicilio Dr. Gac', 'Visitas domiciliarias geriátricas del Dr. Gac (lunes y martes PM); las cubre el rotante que está en UGA esa semana.'],
@@ -1794,12 +1794,13 @@ function renderMas(sub) {
    Sin teléfonos, correos ni datos de pacientes. Lo inferido va con "(?)" y lo que falta con "[completar]". */
 
 /* ---- Aviso / contingencia (banner editable, localStorage) ---- */
-const AVISO_DEFAULT = `CONTINGENCIA · Aluvión San Carlos de Apoquindo (08-10-2026)
-• Clínica San Carlos cerrada (≥ 2 semanas desde el 08-10); agendas de San Carlos y El Alba bloqueadas octubre–noviembre 2026.
-• Consultas reubicadas a Vitacura, Alcántara, Santa Lucía, Bilbao y Escuela Militar o telemedicina. Reubicaciones conocidas: Dr. Gac → Bilbao (vie); Dr. González → Bilbao (vie, bloque B); Dr. Marín → Escuela Militar (mié, bloque A).
-• Rotantes de UGA San Carlos reubicados a Marcoleta / HLF; internos a Sala UC.
-• Fecha de reapertura de San Carlos / El Alba: [por confirmar].
-Actualizado: 22-10-2026 (editar este aviso con el botón).`;
+const AVISO_DEFAULT = `ALUVIÓN SAN CARLOS (08-10-2026)
+🚫 Clínica cerrada · agendas San Carlos y El Alba bloqueadas oct–nov
+🔀 Consultas → Vitacura, Alcántara, Santa Lucía, Bilbao, Esc. Militar o telemedicina
+👨‍⚕️ Gac → Bilbao (vie) · González → Bilbao (vie, bloque B) · Marín → Esc. Militar (mié, bloque A)
+🛏️ Rotantes UGA → Marcoleta / HLF · internos → Sala UC
+📅 Reapertura San Carlos / El Alba: [por confirmar]
+Actualizado 22-10-2026`;
 function avisoHTML() {
   const a = store.get('aviso', null) || { t: AVISO_DEFAULT, u: '' };
   return `<div class="banner" id="banner"><div class="bh"><b>⚠ Avisos y contingencias</b><button class="btn ghost sm" id="avisoEdit">Editar</button></div>
@@ -1898,7 +1899,7 @@ function fdsHTML() {
 const EQUIPO = [
   { n: 'Dra. Marcela Carrasco', a: 'Jefatura', r: 'Jefa del Programa / Departamento (?) — interlocutora con la Red UC CHRISTUS; planificación académica; presupuesto; reasignaciones post-aluvión', s: 'Vitacura lun PM (14:30–17 / 14–18); SJ mar (supervisa PM); Santa Lucía jue 08:20' },
   { n: 'Dra. Trinidad Hoyl', a: 'Jefatura', r: 'Jefa de programa de residentes (?); tutora de Medicina Familiar (asigna a los Med Fam); educación médica (EPAs, webinars)', s: 'Santa Lucía 09–11 y 11–14; Lira / Santa Lucía 14:00; San Carlos jue/vie 11–14; Irarrázaval lun 11–14' },
-  { n: 'Dr. Hugo González', a: 'UGA San Carlos', r: 'Jefe UGA San Carlos desde 17-08-2026; coordinador del calendario semanal de rotantes; tutor seminario delirium y Core', s: 'UGA San Carlos 08:30 todos los días; San Carlos mar 11:00; Esc. Militar vie 14:30/15:00; Bilbao vie B (reubicación)' },
+  { n: 'Dr. Hugo González', a: 'UGA San Carlos', r: 'Jefe UGA San Carlos; coordinador del calendario semanal de rotantes; tutor seminario delirium y Core', s: 'UGA San Carlos: visita desde 09:00 todos los días, reunión multidisciplinaria mié 08:30 (gimnasio); San Carlos mar 11:00; Esc. Militar vie 14:30/15:00; Bilbao vie B (reubicación)' },
   { n: 'Dr. Homero Gac', a: 'Domicilio / UC en Casa', r: 'Jefe UGA San Carlos hasta 17-08-2026; visitas domiciliarias / UC en Casa (lleva rotante solo al domicilio); consulta San Carlos sin rotante', s: 'Domicilio lun y mar PM; San Carlos jue/vie AM 11–14' },
   { n: 'Dra. Marianne Born', a: 'Sala UC Marcoleta', r: 'Sala UC Marcoleta (visita, residentes de geriatría); recibe internos electivos el primer día; supervisa SJ; exámenes de becados; jornadas de bienestar', s: 'Santa Lucía box 1 08:50 (lun, mar, jue AM, vie por medio); El Alba mar 08:50 (cerrado por aluvión); mié AM reservado a beca' },
   { n: 'Dr. Juan Carlos Rodríguez', a: 'Sala UC Marcoleta', r: 'Visita Sala UC (cubre); tutor de internos; seminario delirium; supervisor SJ; turnos FDS', s: 'Santa Lucía box 8 09:00 (+visita) y box 4 08–13; Esc. Militar box 2/9 (08:30, 14:30); Alcántara box 12/6 14:00; Vitacura' },
@@ -1922,7 +1923,7 @@ const ACUDIR = [
   ['Becados de Medicina Interna (reparto, turnos, evaluación)', 'Dra. Danke'],
   ['Becados de Medicina Familiar', 'Dra. Hoyl (prioridad Hoyl / Rodríguez)'],
   ['Internos (tutor) / internos electivos (1er día)', 'Dr. Rodríguez / Dra. Born'],
-  ['UGA San Carlos', 'Dr. González (jefe desde 17-08-2026)'],
+  ['UGA San Carlos', 'Dr. González (jefe)'],
   ['Sala UC Marcoleta', 'Dra. Born (cubre Dr. Rodríguez)'],
   ['Poli becados San Joaquín', 'Supervisor/a del día (ver calendario) · maestro: Dra. Bórquez'],
   ['Domicilio / UC en Casa', 'Dr. Gac'],
