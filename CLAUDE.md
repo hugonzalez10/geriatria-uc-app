@@ -44,7 +44,7 @@ continúe el desarrollo. Léelo completo antes de tocar nada. Está en español 
   1. Editar el maestro en `~/.hermes/data/…` (o editar aquí y copiar de vuelta; mantener ambos iguales).
   2. `cp ~/.hermes/data/geriatria_uc_app.html index.html` y/o `cp ~/.hermes/data/san_carlos_app.html san-carlos/index.html`.
   3. Validar: `node --check` no sirve directo sobre HTML; extraer el `<script>` o abrir en navegador y mirar consola (0 errores exigido).
-  4. `git -c user.name='Hugo González' -c user.email='hugo.gonzalez89@gmail.com' commit -am "…"`.
+  4. `git -c user.name='Hugo González' -c user.email='<correo de Hugo>' commit -am "…"`.
   5. `git push` (si pide usuario: `gh auth setup-git` una vez; `gh` ya está autenticado como hugonzalez10).
   6. Pages tarda ~2 min: `gh api repos/hugonzalez10/geriatria-uc-app/pages/builds/latest --jq .status` → `built`.
 - Telegram no abre HTML en el celular: a Hugo siempre se le manda la **URL**, no el archivo.
