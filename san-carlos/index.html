@@ -389,7 +389,7 @@ const ROTACION_HTML = `
   <p>🩺 <b>Visita: desde las 09:00</b>, todos los días</p>
   <p>👥 <b>Reunión multidisciplinaria:</b> miércoles 08:30 · <b>gimnasio</b></p>
   <p>🏠 <b>Lun y mar PM:</b> domicilio con Dr. Gac</p>
-  <p class="muted">📍 Ubicación UGA: <span class="ph">[completar]</span> · Entrega de turno: <span class="ph">[completar]</span></p>
+  <p class="muted">📍 Ubicación UGA: <b>3<sup>er</sup> piso</b> · Entrega de turno: <span class="ph">[completar]</span></p>
 </div>
 
 <div class="card">
@@ -449,14 +449,14 @@ const ROTACION_HTML = `
     <a class="btn secondary" target="_blank" rel="noopener" href="https://waze.com/ul?q=Camino%20El%20Alba%2012351%2C%20Las%20Condes&navigate=yes">🚗 Waze</a>
   </div>
   <p>🅿️ <b>Estacionamiento:</b> con tarjeta o credencial · pedir tarjeta: <span class="ph">[completar dónde]</span></p>
-  <p>🚪 <b>Acceso:</b> credencial institucional · puerta y horario: <span class="ph">[completar]</span></p>
-  <p>🎒 <b>Casilleros y residencia:</b> <span class="ph">[completar]</span></p>
+  <p>🚪 <b>Acceso:</b> credencial institucional · <b>entrada 08:30</b> · puerta de la <b>UGA, 3<sup>er</sup> piso</b>, con código (pedirlo al Dr. González)</p>
+  <p>🎒 <b>Casilleros:</b> sala del <b>piso −1</b> · <b>no hay residencia</b></p>
   <p>🚨 <b>UCI / Intermedio:</b> no hay SOS de geriatría · urgencia: jefe de turno en pizarra <b>Saturno</b></p>
 </div>
 
 <div class="card">
   <h2>💬 Dudas</h2>
-  <p>👨‍⚕️ <b>Dr. Hugo González</b> · <span class="ph">[cómo ubicarlo]</span></p>
+  <p>👨‍⚕️ <b>Dr. Hugo González</b> · por su <b>WhatsApp personal</b></p>
   <p class="muted">📞 Ver pestaña <b>Directorio</b></p>
 </div>`;
 
@@ -1175,7 +1175,7 @@ const DIR_SECTIONS = [
 const DIR_SERVICIOS = ['Neurología', 'Cardiología', 'Nefrología', 'Infectología', 'Psiquiatría de enlace', 'Traumatología', 'Cirugía',
   'UCI / Intermedio', 'Cuidados paliativos', 'Nutrición', 'Kinesiología', 'Terapia ocupacional', 'Fonoaudiología', 'Químico farmacéutico',
   'Trabajo social', 'Enfermería supervisora'];
-const DIR_DEFAULT = { 'Coordinador de rotantes': [{ n: 'Dr. Hugo González', r: 'Coordinador de rotantes · Geriatría UC', t: '', h: '', u: '[completar: cómo ubicarlo]' }] };
+const DIR_DEFAULT = { 'Coordinador de rotantes': [{ n: 'Dr. Hugo González', r: 'Coordinador de rotantes · Geriatría UC', t: '', h: '', u: 'WhatsApp personal' }] };
 function dirData() {
   const d = store.get('dir', null) || JSON.parse(JSON.stringify(DIR_DEFAULT));
   DIR_SECTIONS.forEach(s => { if (!Array.isArray(d[s])) d[s] = []; });
@@ -1647,8 +1647,8 @@ const AVISO_DEFAULT = `ALUVIÓN SAN CARLOS (08-10-2026)
 🔀 Consultas → Vitacura, Alcántara, Santa Lucía, Bilbao, Esc. Militar o telemedicina
 👨‍⚕️ Gac → Bilbao (vie) · González → Bilbao (vie, bloque B) · Marín → Esc. Militar (mié, bloque A)
 🛏️ Rotantes UGA → Marcoleta / HLF · internos → Sala UC
-📅 Reapertura San Carlos / El Alba: [por confirmar]
-Actualizado 22-10-2026`;
+📅 Reapertura San Carlos / El Alba: 15-12-2026
+Actualizado 31-10-2026`;
 function avisoHTML() {
   const a = store.get('aviso', null) || { t: AVISO_DEFAULT, u: '' };
   return `<div class="banner" id="banner"><div class="bh"><b>⚠ Avisos y contingencias</b><button class="btn ghost sm" id="avisoEdit">Editar</button></div>
